@@ -136,67 +136,60 @@ class TD3:
 
 # Define your environment or import from Gym
 class ContinuumRobotEnv:
-    def __init__(self, num_segments=5, segment_length=0.1, action_range=(-1, 1)):
-        self.num_segments = num_segments  # Number of segments in the robot
-        self.segment_length = segment_length  # Length of each segment
-        self.action_range = action_range  # Range of actions (curvature commands)
-        self.max_action = action_range[1]  # Maximum value of actions
-
-        # Define any other parameters of the environment, such as the workspace limits, obstacles, etc.
-        self.max_steps = 100  # Maximum number of steps per episode
-        self.current_step = 0  # Current step in the episode
-        self.goal_position = np.array([0.5, 0.5])  # Example goal position
-
-        # Define the state space and action space dimensions
-        self.state_dim = num_segments * 2  # Each segment has 2 dimensions (x, y)
-        self.action_dim = num_segments  # Each segment has an associated curvature command
+    def __init__(self, num_segments=3, segment_length=0.1, action_range=(-1, 1), max_steps=100, goal_position=(0.5, 0.5)):
+        self.num_segments = num_segments
+        self.segment_length = segment_length
+        self.action_range = action_range
+        self.max_action = action_range[1]
+        self.max_steps = max_steps
+        self.current_step = 0
+        self.goal_position = np.array(goal_position)
+        self.state_dim = num_segments * 2
+        self.action_dim = num_segments
 
     def reset(self):
-        # Reset the environment to the initial state
         self.current_step = 0
-        # Initial state: all segments at the origin
         initial_state = np.zeros(self.state_dim)
         return initial_state
 
     def step(self, actions):
-        # Perform one step in the environment based on the actions provided
         self.current_step += 1
-        
-        # Simulate the effect of actions on the robot's state (e.g., update segment positions)
         next_state = self._simulate_robot(actions)
-        
-        # Compute the reward based on the achieved task (e.g., distance to the goal position)
         reward = self._compute_reward(next_state)
-        
-        # Check if the episode is done (e.g., reaching the goal or reaching the maximum steps)
         done = self.current_step >= self.max_steps
-        
         return next_state, reward, done
 
     def _simulate_robot(self, actions):
-        # Simulate the robot's state given the actions (curvature commands)
         state = np.zeros(self.state_dim)
         current_position = np.array([0.0, 0.0])
         current_angle = 0.0
 
         for i in range(self.num_segments):
             curvature = actions[i]
-            segment_angle = curvature * self.segment_length
-            next_position = current_position + np.array([
-                self.segment_length * np.cos(current_angle + segment_angle / 2),
-                self.segment_length * np.sin(current_angle + segment_angle / 2)
-            ])
+            if curvature != 0:
+                radius = 1.0 / curvature
+                angle = curvature * self.segment_length
+                cx = current_position[0] - radius * np.sin(current_angle)
+                cy = current_position[1] + radius * np.cos(current_angle)
+                next_position = np.array([
+                    cx + radius * np.sin(current_angle + angle),
+                    cy - radius * np.cos(current_angle + angle)
+                ])
+                current_angle += angle
+            else:
+                next_position = current_position + self.segment_length * np.array([
+                    np.cos(current_angle),
+                    np.sin(current_angle)
+                ])
             state[2 * i: 2 * i + 2] = next_position
             current_position = next_position
-            current_angle += segment_angle
 
         return state
 
     def _compute_reward(self, state):
-        # Compute the reward based on the distance to the goal position
-        end_effector_position = state[-2:]  # The position of the last segment
+        end_effector_position = state[-2:]
         distance_to_goal = np.linalg.norm(end_effector_position - self.goal_position)
-        reward = -distance_to_goal  # Negative distance as reward
+        reward = -distance_to_goal
         return reward
 
 # Instantiate environment and TD3 agent
@@ -210,36 +203,54 @@ wandb.init(
 
     # track hyperparameters and run metadata
     config={
-    "learning_rate": 0.02,
-    "architecture": "CNN",
-    "dataset": "CIFAR-100",
-    "epochs": 10,
+    #"learning_rate": 0.02,
+    #"architecture": "CNN",
+    #"dataset": "CIFAR-100",
+    #"epochs": 10,
     }
 )
 
 # Training loop
 total_episodes = 1000
-batch_size = 64
+rewards = []
+critic_losses1 = []
+critic_losses2 = []
+batch_size = 128
 replay_buffer = ReplayBuffer(buffer_size=1000000)
 episode_rewards = deque(maxlen=100)
 for episode in range(total_episodes):
     state = env.reset()
     episode_reward = 0
+    episode_critic_loss1 = []
+    episode_critic_loss2 = []
     done = False
-    print("episode:",episode)
     while not done:
         
         action = td3_agent.select_action(state)
         next_state, reward, done = env.step(action)
         replay_buffer.add(state, action, next_state, reward, done)
+        #td3_agent.train(replay_buffer, batch_size=batch_size)
+        
+        
         state = next_state
         episode_reward += reward
-        td3_agent.train(replay_buffer, batch_size=batch_size)
-
     
+        # Train the agent
+        if len(replay_buffer) > batch_size:
+            critic1_loss, critic2_loss = td3_agent.train(replay_buffer, batch_size)
+        #    episode_critic_loss1 += critic1_loss
+        #    episode_critic_loss2 += critic2_loss
+
+    # Store episode metrics
+    rewards.append(episode_reward)
+    #critic_losses1.append(episode_critic_loss1)
+    #critic_losses2.append(episode_critic_loss2)
+    #rewards.append(episode_reward)
+
     episode_rewards.append(episode_reward)
     avg_reward = np.mean(episode_rewards)
-    #wandb.log({'episode_rewards': episode_rewards, 'episode': episode})
     wandb.log({'avg_reward': avg_reward, 'episode': episode})
-
+    wandb.log({'rewards': rewards, 'episode': episode})
+   # wandb.log({'critic_losses1': critic_losses1, 'episode': episode})
+   # wandb.log({'critic_losses2': critic_losses2, 'episode': episode})
     print(f"Episode: {episode + 1}, Average Reward: {avg_reward}")
