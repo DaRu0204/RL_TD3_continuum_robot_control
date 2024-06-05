@@ -116,8 +116,11 @@ class TD3:
 
 class ContinuumRobotEnv:
     def __init__(self):
-        # Initialize environment parameters
-        pass
+        self.l1 = 0.1
+        self.l2 = 0.1
+        self.l3 = 0.1
+
+        self.done = False           # Flag indicating if the episode is done
 
     def reset(self):
         # Reset the environment to its initial state
