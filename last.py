@@ -13,9 +13,9 @@ Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'
 class Actor(nn.Module):
     def __init__(self, state_dim, action_dim, max_action):
         super(Actor, self).__init__()
-        self.layer1 = nn.Linear(state_dim, 256)
-        self.layer2 = nn.Linear(256, 256)
-        self.layer3 = nn.Linear(256, action_dim)
+        self.layer1 = nn.Linear(state_dim, 512)
+        self.layer2 = nn.Linear(512, 512)
+        self.layer3 = nn.Linear(512, action_dim)
         self.max_action = max_action
 
     def forward(self, state):
@@ -28,9 +28,9 @@ class Actor(nn.Module):
 class Critic(nn.Module):
     def __init__(self, state_dim, action_dim):
         super(Critic, self).__init__()
-        self.layer1 = nn.Linear(state_dim + action_dim, 256)
-        self.layer2 = nn.Linear(256, 256)
-        self.layer3 = nn.Linear(256, 1)
+        self.layer1 = nn.Linear(state_dim + action_dim, 512)
+        self.layer2 = nn.Linear(512, 512)
+        self.layer3 = nn.Linear(512, 1)
 
     def forward(self, state, action):
         x = torch.cat([state, action], 1)
@@ -76,12 +76,12 @@ class TD3:
         self.critic1 = Critic(state_dim, action_dim)
         self.critic1_target = Critic(state_dim, action_dim)
         self.critic1_target.load_state_dict(self.critic1.state_dict())
-        self.critic1_optimizer = optim.Adam(self.critic1.parameters(), lr=0.0002)#0.002
+        self.critic1_optimizer = optim.Adam(self.critic1.parameters(), lr=0.0003)#0.002
 
         self.critic2 = Critic(state_dim, action_dim)
         self.critic2_target = Critic(state_dim, action_dim)
         self.critic2_target.load_state_dict(self.critic2.state_dict())
-        self.critic2_optimizer = optim.Adam(self.critic2.parameters(), lr=0.0002)#0.002
+        self.critic2_optimizer = optim.Adam(self.critic2.parameters(), lr=0.0003)#0.002
 
         self.max_action = max_action
 
@@ -90,7 +90,7 @@ class TD3:
         return self.actor(state).cpu().data.numpy().flatten()
 
     #def train(self, replay_buffer, batch_size=64, gamma=0.99, noise=0.2, policy_noise=0.2, noise_clip=0.5, policy_freq=2):
-    def train(self, replay_buffer, batch_size=64, gamma=0.99, noise=0.2, policy_noise=0.1, noise_clip=0.2, policy_freq=2):
+    def train(self, replay_buffer, batch_size=128, gamma=0.99, noise=0.2, policy_noise=0.2, noise_clip=0.2, policy_freq=2):
         if len(replay_buffer) < batch_size:
             return
 
@@ -137,7 +137,7 @@ class TD3:
 
 # Define your environment or import from Gym
 class ContinuumRobotEnv:
-    def __init__(self, num_segments=3, segment_length=0.5, action_range=(-1, 1), max_steps=200, goal_position=(0.5, 0.5)):
+    def __init__(self, num_segments=3, segment_length=0.5, action_range=(-1.5, 1.5), max_steps=50, goal_position=(0.8, 0.8)):
         self.num_segments = num_segments
         self.segment_length = segment_length
         self.action_range = action_range
@@ -191,7 +191,7 @@ class ContinuumRobotEnv:
         end_effector_position = state[-2:]
         distance_to_goal = np.linalg.norm(end_effector_position - self.goal_position)
         reward = -distance_to_goal
-        if distance_to_goal < 0.1:
+        if distance_to_goal < 0.3:
             reward += 100
         reward -= self.current_step * 0.01  # Small penalty per step, adjust the factor as needed
         return reward
@@ -219,7 +219,7 @@ total_episodes = 1000
 rewards = []
 critic_losses1 = []
 critic_losses2 = []
-batch_size = 64
+batch_size = 16
 replay_buffer = ReplayBuffer(buffer_size=1000000)
 episode_rewards = deque(maxlen=100)
 for episode in range(total_episodes):
