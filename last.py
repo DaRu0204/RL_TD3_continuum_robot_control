@@ -13,9 +13,9 @@ Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'
 class Actor(nn.Module):
     def __init__(self, state_dim, action_dim, max_action):
         super(Actor, self).__init__()
-        self.layer1 = nn.Linear(state_dim, 512)
-        self.layer2 = nn.Linear(512, 512)
-        self.layer3 = nn.Linear(512, action_dim)
+        self.layer1 = nn.Linear(state_dim, 256)
+        self.layer2 = nn.Linear(256, 256)
+        self.layer3 = nn.Linear(256, action_dim)
         self.max_action = max_action
 
     def forward(self, state):
@@ -28,9 +28,9 @@ class Actor(nn.Module):
 class Critic(nn.Module):
     def __init__(self, state_dim, action_dim):
         super(Critic, self).__init__()
-        self.layer1 = nn.Linear(state_dim + action_dim, 512)
-        self.layer2 = nn.Linear(512, 512)
-        self.layer3 = nn.Linear(512, 1)
+        self.layer1 = nn.Linear(state_dim + action_dim, 256)
+        self.layer2 = nn.Linear(256, 256)
+        self.layer3 = nn.Linear(256, 1)
 
     def forward(self, state, action):
         x = torch.cat([state, action], 1)
@@ -134,10 +134,12 @@ class TD3:
 
             for param, target_param in zip(self.critic2.parameters(), self.critic2_target.parameters()):
                 target_param.data.copy_(0.995 * target_param.data + 0.005 * param.data)
+        # Return critic losses for logging
+        return critic1_loss, critic2_loss
 
 # Define your environment or import from Gym
 class ContinuumRobotEnv:
-    def __init__(self, num_segments=3, segment_length=0.5, action_range=(-1.5, 1.5), max_steps=50, goal_position=(0.8, 0.8)):
+    def __init__(self, num_segments=3, segment_length=0.5, action_range=(-2, 2), max_steps=50, goal_position=(0.7, 0.7)):
         self.num_segments = num_segments
         self.segment_length = segment_length
         self.action_range = action_range
@@ -191,8 +193,8 @@ class ContinuumRobotEnv:
         end_effector_position = state[-2:]
         distance_to_goal = np.linalg.norm(end_effector_position - self.goal_position)
         reward = -distance_to_goal
-        if distance_to_goal < 0.3:
-            reward += 100
+        if distance_to_goal < 0.1:
+            reward += 50
         reward -= self.current_step * 0.01  # Small penalty per step, adjust the factor as needed
         return reward
 
@@ -217,9 +219,8 @@ wandb.init(
 # Training loop
 total_episodes = 1000
 rewards = []
-critic_losses1 = []
-critic_losses2 = []
-batch_size = 16
+batch_size = 256
+critic_losses = []  # List to store critic losses
 replay_buffer = ReplayBuffer(buffer_size=1000000)
 episode_rewards = deque(maxlen=100)
 for episode in range(total_episodes):
@@ -232,9 +233,13 @@ for episode in range(total_episodes):
         next_state, reward, done = env.step(action)
         replay_buffer.add(state, action, next_state, reward, done)
         td3_agent.train(replay_buffer, batch_size=batch_size)
+        #critic1_loss, critic2_loss = td3_agent.train(replay_buffer, batch_size=batch_size)  # Retrieve critic losses
         state = next_state
         episode_reward += reward
-    
+        # Log critic loss
+        #critic_loss = (critic1_loss + critic2_loss) / 2  # Assuming using the average of both critic losses
+        #critic_losses.append(critic_loss.item())
+        
         # Train the agent
         #if len(replay_buffer) > batch_size:
         #    critic1_loss, critic2_loss = td3_agent.train(replay_buffer, batch_size)
@@ -250,5 +255,5 @@ for episode in range(total_episodes):
     episode_rewards.append(episode_reward)
     avg_reward = np.mean(episode_rewards)
     wandb.log({'avg_reward': avg_reward, 'episode': episode})
-
+    #wandb.log({'critic_losses': critic_loss, 'episode': episode})
     print(f"Episode: {episode + 1}, Average Reward: {avg_reward}")
