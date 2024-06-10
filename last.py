@@ -73,17 +73,17 @@ class TD3:
         self.actor = Actor(state_dim, action_dim, max_action)
         self.actor_target = Actor(state_dim, action_dim, max_action)
         self.actor_target.load_state_dict(self.actor.state_dict())
-        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=0.0001)#0.001
+        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=0.001)#0.001
 
         self.critic1 = Critic(state_dim, action_dim)
         self.critic1_target = Critic(state_dim, action_dim)
         self.critic1_target.load_state_dict(self.critic1.state_dict())
-        self.critic1_optimizer = optim.Adam(self.critic1.parameters(), lr=0.0003)#0.002
+        self.critic1_optimizer = optim.Adam(self.critic1.parameters(), lr=0.003)#0.002
 
         self.critic2 = Critic(state_dim, action_dim)
         self.critic2_target = Critic(state_dim, action_dim)
         self.critic2_target.load_state_dict(self.critic2.state_dict())
-        self.critic2_optimizer = optim.Adam(self.critic2.parameters(), lr=0.0003)#0.002
+        self.critic2_optimizer = optim.Adam(self.critic2.parameters(), lr=0.003)#0.002
 
         self.max_action = max_action
 
@@ -238,7 +238,7 @@ class TD3:
 
 # Define your environment or import from Gym
 class ContinuumRobotEnv:
-    def __init__(self, num_segments=3, segment_length=0.5, action_range=(-1.5, 1.5), max_steps=50, goal_position=(1, 0.7)):
+    def __init__(self, num_segments=3, segment_length=0.5, action_range=(-1.5, 1.5), max_steps=150, goal_position=(1, 0.7)):
         self.num_segments = num_segments
         self.segment_length = segment_length
         self.action_range = action_range
@@ -292,10 +292,15 @@ class ContinuumRobotEnv:
         end_effector_position = state[-2:]
         distance_to_goal = np.linalg.norm(end_effector_position - self.goal_position)
         reward = -distance_to_goal
-        if distance_to_goal < 0.1:
-            reward += 100
+        if distance_to_goal < 0.05:
+            reward += 200
         reward -= self.current_step * 0.001  # Small penalty per step, adjust the factor as needed
         return reward
+    
+    def distance(self, state):
+        end_effector_position = state[-2:]
+        distance_to_goal = np.linalg.norm(end_effector_position - self.goal_position)
+        return distance_to_goal
 
 # Instantiate environment and TD3 agent
 env = ContinuumRobotEnv()
@@ -317,7 +322,7 @@ wandb.init(
 
 def main():
     # Training loop
-    total_episodes = 5
+    total_episodes = 500
     rewards = []
     batch_size = 64
     critic_losses = []  # List to store critic losses
@@ -347,6 +352,7 @@ def main():
             #    episode_critic_loss2 += critic2_loss
 
         # Store episode metrics
+        dis = env.distance(state)
         rewards.append(episode_reward)
         #critic_losses1.append(episode_critic_loss1)
         #critic_losses2.append(episode_critic_loss2)
@@ -355,6 +361,7 @@ def main():
         episode_rewards.append(episode_reward)
         avg_reward = np.mean(episode_rewards)
         wandb.log({'avg_reward': avg_reward, 'episode': episode})
+        wandb.log({'distance': dis, 'episode': episode})
         #wandb.log({'critic_losses': critic_loss, 'episode': episode})
         print(f"Episode: {episode + 1}, Average Reward: {avg_reward}")
         
@@ -362,9 +369,9 @@ def main():
     #current_dir = os.path.dirname(os.path.abspath(__file__))
     #td3_agent.save(current_dir)
     td3_agent.save("td3_continuum_robot")
-    saved_state_dict = torch.load("td3_continuum_robot" + "_actor")
-    for key, value in saved_state_dict.items():
-        print(key, value.shape)
+    #saved_state_dict = torch.load("td3_continuum_robot" + "_actor")
+    #for key, value in saved_state_dict.items():
+    #    print(key, value.shape)
 
 if __name__ == "__main__":
     main()
