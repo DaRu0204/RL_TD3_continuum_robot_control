@@ -6,6 +6,7 @@ import random
 from collections import deque, namedtuple
 import wandb
 from wandb.keras import WandbCallback
+import os
 
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward', 'done'))
 
@@ -68,6 +69,7 @@ class ReplayBuffer:
 # TD3 algorithm
 class TD3:
     def __init__(self, state_dim, action_dim, max_action):
+        pass
         self.actor = Actor(state_dim, action_dim, max_action)
         self.actor_target = Actor(state_dim, action_dim, max_action)
         self.actor_target.load_state_dict(self.actor.state_dict())
@@ -90,7 +92,7 @@ class TD3:
         return self.actor(state).cpu().data.numpy().flatten()
 
     #def train(self, replay_buffer, batch_size=64, gamma=0.99, noise=0.2, policy_noise=0.2, noise_clip=0.5, policy_freq=2):
-    def train(self, replay_buffer, batch_size=128, gamma=0.99, noise=0.2, policy_noise=0.2, noise_clip=0.2, policy_freq=2):
+    def train(self, replay_buffer, batch_size=64, gamma=0.99, noise=0.2, policy_noise=0.2, noise_clip=0.2, policy_freq=2):
         if len(replay_buffer) < batch_size:
             return
 
@@ -136,10 +138,107 @@ class TD3:
                 target_param.data.copy_(0.995 * target_param.data + 0.005 * param.data)
         # Return critic losses for logging
         return critic1_loss, critic2_loss
+    
+    # def save(self, filename):
+    #     # Save model method
+    #     if not os.path.exists(filename):
+    #         os.makedirs(filename)
+
+    #     torch.save(self.actor.state_dict(), os.path.join(filename, "actor.pth"))
+    #     torch.save(self.critic1.state_dict(), os.path.join(filename, "critic_1.pth"))
+    #     torch.save(self.critic2.state_dict(), os.path.join(filename, "critic_2.pth"))
+
+    # def load(self, filename):
+    #     # Load model method
+    #     actor_path = os.path.join(filename, "actor.pth")
+    #     critic_1_path = os.path.join(filename, "critic_1.pth")
+    #     critic_2_path = os.path.join(filename, "critic_2.pth")
+    #     print("TUNAAAAAAAAAAAAAAAAAAAAAA:",actor_path)
+    #     if not (os.path.exists(actor_path) and os.path.exists(critic_1_path) and os.path.exists(critic_2_path)):
+    #         raise FileNotFoundError("One or more model files not found in the specified directory.")
+
+    #     self.actor.load_state_dict(torch.load(actor_path))
+    #     self.actor.eval()
+
+    #     self.critic1.load_state_dict(torch.load(critic_1_path))
+    #     self.critic1.eval()
+
+    #     self.critic2.load_state_dict(torch.load(critic_2_path))
+    #     self.critic2.eval()
+
+    # def load(self):
+    #     # Load model method
+    #     current_dir = os.path.dirname(os.path.abspath(__file__))
+    #     actor_path = os.path.join(current_dir,"actor.pth")
+    #     critic_1_path = os.path.join(current_dir,"critic_1.pth")
+    #     critic_2_path = os.path.join(current_dir,"critic_2.pth")
+    #     print("TUNAAAAAAAAAAAAAAAAAAAAAA:",actor_path)
+    #     if not (os.path.exists(actor_path) and os.path.exists(critic_1_path) and os.path.exists(critic_2_path)):
+    #         raise FileNotFoundError("One or more model files not found in the specified directory.")
+
+    #     self.actor.load_state_dict(torch.load(actor_path))
+    #     self.actor.eval()
+
+    #     self.critic1.load_state_dict(torch.load(critic_1_path))
+    #     self.critic1.eval()
+
+    #     self.critic2.load_state_dict(torch.load(critic_2_path))
+    #     self.critic2.eval()
+    
+    def save(self, filename):
+        torch.save(self.actor.state_dict(), filename + "_actor")
+        torch.save(self.critic1.state_dict(), filename + "_critic1")
+        torch.save(self.critic2.state_dict(), filename + "_critic2")
+
+    def load(self, filename):
+        self.actor.load_state_dict(torch.load(filename + "_actor"))
+        self.actor_target.load_state_dict(self.actor.state_dict())
+        self.critic1.load_state_dict(torch.load(filename + "_critic1"))
+        self.critic1_target.load_state_dict(self.critic1.state_dict())
+        self.critic2.load_state_dict(torch.load(filename + "_critic2"))
+        self.critic2_target.load_state_dict(self.critic2.state_dict())
+    
+    def select_action2(desired_position, state_dim=6, action_dim=3, max_action=1.5, model_name=""):
+        script_directory = os.path.dirname(os.path.abspath(__file__))  # Get absolute path of script directory
+        model_path = os.path.join(script_directory, f"{model_name}actor.pth")  # Construct full path to actor model file
+
+        actor = Actor(state_dim, action_dim, max_action)
+        actor.load_state_dict(torch.load(model_path))
+        actor.eval()
+
+        with torch.no_grad():
+            state = torch.FloatTensor(desired_position.reshape(1, -1))
+            action = actor(state).cpu().data.numpy().flatten()
+
+        return action
+    
+    # def load_agent(filepath):
+    #     actor = Actor()  # Assuming Actor() initializes your actor network architecture
+    #     critic = Critic()  # Assuming Critic() initializes your critic network architecture
+    #     actor.load_state_dict(torch.load(filepath + '_actor.pth'))
+    #     critic.load_state_dict(torch.load(filepath + '_critic.pth'))
+    #     agent = TD3(actor, critic)  # Assuming TD3() initializes your agent architecture
+    #     return agent
+    
+    def load_agent(self, actor_path, critic1_path, critic2_path):
+        self.actor.load_state_dict(torch.load(actor_path))
+        self.actor_target.load_state_dict(self.actor.state_dict())
+        self.critic1.load_state_dict(torch.load(critic1_path))
+        self.critic1_target.load_state_dict(self.critic1.state_dict())
+        self.critic2.load_state_dict(torch.load(critic2_path))
+        self.critic2_target.load_state_dict(self.critic2.state_dict())
+
+    def get_action(self, state):
+        if self.load_agent is None:
+            raise ValueError("No trained agent loaded.")
+        
+        # Use the loaded agent to get the action
+        action = self.select_action(state)
+        return action
 
 # Define your environment or import from Gym
 class ContinuumRobotEnv:
-    def __init__(self, num_segments=3, segment_length=0.5, action_range=(-2, 2), max_steps=50, goal_position=(0.7, 0.7)):
+    def __init__(self, num_segments=3, segment_length=0.5, action_range=(-1.5, 1.5), max_steps=50, goal_position=(1, 0.7)):
         self.num_segments = num_segments
         self.segment_length = segment_length
         self.action_range = action_range
@@ -194,8 +293,8 @@ class ContinuumRobotEnv:
         distance_to_goal = np.linalg.norm(end_effector_position - self.goal_position)
         reward = -distance_to_goal
         if distance_to_goal < 0.1:
-            reward += 50
-        reward -= self.current_step * 0.01  # Small penalty per step, adjust the factor as needed
+            reward += 100
+        reward -= self.current_step * 0.001  # Small penalty per step, adjust the factor as needed
         return reward
 
 # Instantiate environment and TD3 agent
@@ -216,44 +315,56 @@ wandb.init(
     }
 )
 
-# Training loop
-total_episodes = 1000
-rewards = []
-batch_size = 256
-critic_losses = []  # List to store critic losses
-replay_buffer = ReplayBuffer(buffer_size=1000000)
-episode_rewards = deque(maxlen=100)
-for episode in range(total_episodes):
-    state = env.reset()
-    episode_reward = 0
-    done = False
-    while not done:
-        
-        action = td3_agent.select_action(state)
-        next_state, reward, done = env.step(action)
-        replay_buffer.add(state, action, next_state, reward, done)
-        td3_agent.train(replay_buffer, batch_size=batch_size)
-        #critic1_loss, critic2_loss = td3_agent.train(replay_buffer, batch_size=batch_size)  # Retrieve critic losses
-        state = next_state
-        episode_reward += reward
-        # Log critic loss
-        #critic_loss = (critic1_loss + critic2_loss) / 2  # Assuming using the average of both critic losses
-        #critic_losses.append(critic_loss.item())
-        
-        # Train the agent
-        #if len(replay_buffer) > batch_size:
-        #    critic1_loss, critic2_loss = td3_agent.train(replay_buffer, batch_size)
-        #    episode_critic_loss1 += critic1_loss
-        #    episode_critic_loss2 += critic2_loss
+def main():
+    # Training loop
+    total_episodes = 5
+    rewards = []
+    batch_size = 64
+    critic_losses = []  # List to store critic losses
+    replay_buffer = ReplayBuffer(buffer_size=1000000)
+    episode_rewards = deque(maxlen=100)
+    for episode in range(total_episodes):
+        state = env.reset()
+        episode_reward = 0
+        done = False
+        while not done:
+            
+            action = td3_agent.select_action(state)
+            next_state, reward, done = env.step(action)
+            replay_buffer.add(state, action, next_state, reward, done)
+            td3_agent.train(replay_buffer, batch_size=batch_size)
+            #critic1_loss, critic2_loss = td3_agent.train(replay_buffer, batch_size=batch_size)  # Retrieve critic losses
+            state = next_state
+            episode_reward += reward
+            # Log critic loss
+            #critic_loss = (critic1_loss + critic2_loss) / 2  # Assuming using the average of both critic losses
+            #critic_losses.append(critic_loss.item())
+            
+            # Train the agent
+            #if len(replay_buffer) > batch_size:
+            #    critic1_loss, critic2_loss = td3_agent.train(replay_buffer, batch_size)
+            #    episode_critic_loss1 += critic1_loss
+            #    episode_critic_loss2 += critic2_loss
 
-    # Store episode metrics
-    rewards.append(episode_reward)
-    #critic_losses1.append(episode_critic_loss1)
-    #critic_losses2.append(episode_critic_loss2)
-    #rewards.append(episode_reward)
+        # Store episode metrics
+        rewards.append(episode_reward)
+        #critic_losses1.append(episode_critic_loss1)
+        #critic_losses2.append(episode_critic_loss2)
+        #rewards.append(episode_reward)
 
-    episode_rewards.append(episode_reward)
-    avg_reward = np.mean(episode_rewards)
-    wandb.log({'avg_reward': avg_reward, 'episode': episode})
-    #wandb.log({'critic_losses': critic_loss, 'episode': episode})
-    print(f"Episode: {episode + 1}, Average Reward: {avg_reward}")
+        episode_rewards.append(episode_reward)
+        avg_reward = np.mean(episode_rewards)
+        wandb.log({'avg_reward': avg_reward, 'episode': episode})
+        #wandb.log({'critic_losses': critic_loss, 'episode': episode})
+        print(f"Episode: {episode + 1}, Average Reward: {avg_reward}")
+        
+    # Save the trained model
+    #current_dir = os.path.dirname(os.path.abspath(__file__))
+    #td3_agent.save(current_dir)
+    td3_agent.save("td3_continuum_robot")
+    saved_state_dict = torch.load("td3_continuum_robot" + "_actor")
+    for key, value in saved_state_dict.items():
+        print(key, value.shape)
+
+if __name__ == "__main__":
+    main()

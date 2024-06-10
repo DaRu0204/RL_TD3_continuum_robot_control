@@ -1,0 +1,27 @@
+Episode: 1, Average Reward: -38.483882915390424
+Episode: 2, Average Reward: -38.4435533412453
+Episode: 3, Average Reward: -38.27071941625488
+Episode: 4, Average Reward: -37.72086491985534
+Episode: 5, Average Reward: -35.470817922129534
+/home/km/GitHub/RL_TD3_continuum_robot_control/last.py:59: UserWarning: Creating a tensor from a list of numpy.ndarrays is extremely slow. Please consider converting the list to a single numpy.ndarray with numpy.array() before converting to a tensor. (Triggered internally at ../torch/csrc/utils/tensor_new.cpp:245.)
+  torch.tensor(states, dtype=torch.float32),
+Traceback (most recent call last):
+  File "/home/km/GitHub/RL_TD3_continuum_robot_control/implementation_2.py", line 8, in <module>
+    from last import TD3
+  File "/home/km/GitHub/RL_TD3_continuum_robot_control/last.py", line 329, in <module>
+    td3_agent.save("")
+  File "/home/km/GitHub/RL_TD3_continuum_robot_control/last.py", line 145, in save
+    os.makedirs(filename)
+  File "/usr/lib/python3.10/os.py", line 225, in makedirs
+    mkdir(name, mode)
+FileNotFoundError: [Errno 2] No such file or directory: ''
+Traceback (most recent call last):
+  File "/home/km/GitHub/RL_TD3_continuum_robot_control/implementation_2.py", line 8, in <module>
+    from last import TD3
+  File "/home/km/GitHub/RL_TD3_continuum_robot_control/last.py", line 329, in <module>
+    td3_agent.save("")
+  File "/home/km/GitHub/RL_TD3_continuum_robot_control/last.py", line 145, in save
+    os.makedirs(filename)
+  File "/usr/lib/python3.10/os.py", line 225, in makedirs
+    mkdir(name, mode)
+FileNotFoundError: [Errno 2] No such file or directory: ''
