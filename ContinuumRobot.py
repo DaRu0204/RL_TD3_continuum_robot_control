@@ -12,7 +12,7 @@ class ContinuumRobotEnv:
     #     self.goal_position = np.array(goal_position)
     #     self.state_dim = num_segments * 2
     #     self.action_dim = num_segments
-    def __init__(self, segment_length=1.0, max_tendon_tension=1.0, num_segments=1, max_steps=25, max_action=1.0):
+    def __init__(self, segment_length=0.1, max_tendon_tension=1, num_segments=3, num_tendons = 3, max_steps=25, max_action=2):
         self.segment_length = segment_length  # Length of each segment
         self.max_tendon_tension = max_tendon_tension  # Maximum tension in tendons
         self.num_segments = num_segments  # Number of segments
@@ -21,13 +21,13 @@ class ContinuumRobotEnv:
 
         # Define the state and action dimensions
         self.state_dim = 2  # For 2D coordinates (x, y)
-        self.action_dim = 3  # Three tendons
+        self.action_dim = num_segments * num_tendons  # Total number of actions  # Three tendons
 
         # State of the robot (tip position)
         self.state = np.zeros(self.state_dim)
 
         # Target position (goal)
-        self.target_position = np.array([0.5, 0.5])
+        self.target_position = np.array([0.2, 0.1])
 
         # Current step counter
         self.current_step = 0
@@ -110,7 +110,7 @@ class ContinuumRobotEnv:
         # Compute the reward as the negative distance to the target position
         distance_to_target = np.linalg.norm(state - self.target_position)
         reward = -distance_to_target
-        if distance_to_target < 0.05:
+        if distance_to_target < 0.005:
              reward += 200
         reward -= self.current_step * 0.001  # Small penalty per step, adjust the factor as needed
         return reward
@@ -120,6 +120,125 @@ class ContinuumRobotEnv:
         return distance_to_goal
     
     def render(self, state, actions):
+        # Initialize segment positions and orientation
+        segment_positions = [np.zeros(2)]
+        orientation = 0.0
+
+        for i in range(self.num_segments):
+            # Compute the curvature (kappa) using the PCC method for each segment
+            kappa = actions[i] / self.segment_length
+            
+            # Update the starting position of the segment to be the end position of the previous segment
+            start_pos = segment_positions[-1]
+            
+            if kappa != 0:
+                # Compute the new segment end position for non-zero curvature
+                delta_theta = kappa * self.segment_length
+                r = 1 / kappa
+                cx = start_pos[0] - r * np.sin(orientation)
+                cy = start_pos[1] + r * np.cos(orientation)
+                start_angle = orientation
+                end_angle = orientation + delta_theta
+                angles = np.linspace(start_angle, end_angle, 100)
+                x_arc = cx + r * np.sin(angles)
+                y_arc = cy - r * np.cos(angles)
+                segment_positions.extend(np.column_stack((x_arc, y_arc)))
+                # Update the orientation
+                orientation = end_angle
+            else:
+                # For zero curvature, the segment end position is a straight line
+                delta_x = self.segment_length * np.cos(orientation)
+                delta_y = self.segment_length * np.sin(orientation)
+                segment_positions.append(start_pos + np.array([delta_x, delta_y]))
+                # Update the orientation
+                orientation += 0
+            
+        segment_positions = np.array(segment_positions)
+        print("segment_positions:",segment_positions)
+        # Plot the robot segments
+        plt.figure(figsize=(8, 6))
+        plt.plot(segment_positions[:, 0], segment_positions[:, 1], color='blue', label='Robot Curve')
+
+        # Plot the base position
+        plt.scatter(0, 0, color='black', label='Base Position')
+
+        # Plot the tip position (end of the blue curve)
+        plt.scatter(segment_positions[-1, 0], segment_positions[-1, 1], color='red', label='Tip Position')
+
+        # Plot the target position
+        plt.scatter(self.target_position[0], self.target_position[1], color='green', label='Target Position')
+
+        plt.title('Continuum Robot Visualization')
+        plt.xlabel('X')
+        plt.ylabel('Y')
+        plt.grid(True)
+        plt.legend()
+        plt.axis('equal')
+        plt.show()
+    
+    def render3(self, state, actions):
+        # Initialize segment positions and orientation
+        segment_positions = [np.zeros(2)]
+        orientation = 0.0
+
+        for _ in range(self.num_segments):
+            # Compute the curvature (kappa) using the PCC method for each segment
+            kappa = np.sum(actions) / (3 * self.segment_length)
+            # Compute the change in orientation (theta) for the segment
+            theta = np.arctan2(np.sum(actions[1:] - actions[:-1]), self.segment_length)
+            
+            # Update the starting position of the segment to be the end position of the previous segment
+            start_pos = segment_positions[-1]
+            
+            if kappa != 0:
+                # Compute the new segment end position for non-zero curvature
+                delta_theta = kappa * self.segment_length
+                r = 1 / kappa
+                cx = start_pos[0] - r * np.sin(orientation)
+                cy = start_pos[1] + r * np.cos(orientation)
+                start_angle = orientation
+                end_angle = orientation + delta_theta
+                if kappa > 0:
+                    angles = np.linspace(start_angle, end_angle, 100)
+                else:
+                    angles = np.linspace(end_angle, start_angle, 100)
+                x_arc = cx + r * np.sin(angles)
+                y_arc = cy - r * np.cos(angles)
+                segment_positions.extend(np.column_stack((x_arc, y_arc)))
+            else:
+                # For zero curvature, the segment end position is a straight line
+                delta_x = self.segment_length * np.cos(orientation)
+                delta_y = self.segment_length * np.sin(orientation)
+                segment_positions.append(start_pos + np.array([delta_x, delta_y]))
+            # Update the orientation
+            orientation += theta
+
+        segment_positions = np.array(segment_positions)
+
+        # Plot the robot segments
+        plt.figure(figsize=(8, 6))
+        for i in range(len(segment_positions) - 1):
+            plt.plot([segment_positions[i][0], segment_positions[i+1][0]],
+                    [segment_positions[i][1], segment_positions[i+1][1]],
+                    color='blue')
+
+        # Plot the base position
+        plt.scatter(0, 0, color='black', label='Base Position')
+
+        # Plot the tip position
+        plt.scatter(state[0], state[1], color='red', label='Tip Position')
+
+        # Plot the target position
+        plt.scatter(self.target_position[0], self.target_position[1], color='green', label='Target Position')
+
+        plt.title('Continuum Robot Visualization')
+        plt.xlabel('X')
+        plt.ylabel('Y')
+        plt.grid(True)
+        plt.axis('equal')
+        plt.show()
+    
+    def render2(self, state, actions):
         # plt.figure()
 
         # # Plot the base position
@@ -162,6 +281,7 @@ class ContinuumRobotEnv:
         # plt.show()
 
         # Calculate the positions of all segments
+        # Calculate the positions of all segments
         segment_positions = [np.zeros(2)]
         orientation = 0.0
 
@@ -172,26 +292,32 @@ class ContinuumRobotEnv:
             theta = np.arctan2(np.sum(actions[1:] - actions[:-1]), self.segment_length)
             if kappa != 0:
                 # Compute the new segment end position for non-zero curvature
-                delta_x = (1 / kappa) * (np.sin(kappa * self.segment_length) * np.cos(orientation) - 
-                                        (1 - np.cos(kappa * self.segment_length)) * np.sin(orientation))
-                delta_y = (1 / kappa) * (np.sin(kappa * self.segment_length) * np.sin(orientation) + 
-                                        (1 - np.cos(kappa * self.segment_length)) * np.cos(orientation))
+                delta_theta = kappa * self.segment_length
+                r = 1 / kappa
+                cx = segment_positions[-1][0] - r * np.sin(orientation)
+                cy = segment_positions[-1][1] + r * np.cos(orientation)
+                start_angle = orientation
+                end_angle = orientation + delta_theta
+                if kappa > 0:
+                    angles = np.linspace(start_angle, end_angle, 100)
+                else:
+                    angles = np.linspace(end_angle, start_angle, 100)
+                x_arc = cx + r * np.sin(angles)
+                y_arc = cy - r * np.cos(angles)
+                segment_positions.extend(np.column_stack((x_arc, y_arc)))
             else:
                 # For zero curvature, the segment end position is a straight line
                 delta_x = self.segment_length * np.cos(orientation)
                 delta_y = self.segment_length * np.sin(orientation)
-            # Update the tip position and orientation
-            segment_positions.append(segment_positions[-1] + np.array([delta_x, delta_y]))
+                segment_positions.append(segment_positions[-1] + np.array([delta_x, delta_y]))
+            # Update the orientation
             orientation += theta
 
         segment_positions = np.array(segment_positions)
 
         # Plot the robot segments
         plt.figure(figsize=(8, 6))
-        for i in range(len(segment_positions) - 1):
-            plt.plot([segment_positions[i][0], segment_positions[i+1][0]],
-                    [segment_positions[i][1], segment_positions[i+1][1]],
-                    color='blue')
+        plt.plot(segment_positions[:, 0], segment_positions[:, 1], color='blue')
 
         plt.title('Continuum Robot Visualization')
         plt.xlabel('X')

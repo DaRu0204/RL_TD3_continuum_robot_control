@@ -31,7 +31,7 @@ wandb.init(
 
 def main():
     # Training loop
-    total_episodes = 500
+    total_episodes = 100
     rewards = []
     batch_size = 64
     critic_losses = []  # List to store critic losses
@@ -64,7 +64,7 @@ def main():
     loaded_agent = TD3(state_dim=env.state_dim, action_dim=env.action_dim, max_action=env.max_action)
     loaded_agent.load("td3_continuum_robot")
     #desired_positon = np.array([0.0, 0.0, 0.0, 0.0, 1.0, 0.7])
-    desired_positon = np.array([0.5, 0.5])
+    desired_positon = np.array([0.2, -0.1])
     action = loaded_agent.select_action(desired_positon)
     state, reward, done = env.step(action)
     error = np.linalg.norm(desired_positon - state)
