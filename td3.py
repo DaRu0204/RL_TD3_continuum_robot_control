@@ -6,82 +6,28 @@ import random
 from collections import deque, namedtuple
 import wandb
 from wandb.keras import WandbCallback
-
-Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward', 'done'))
-
-# Actor network
-class Actor(nn.Module):
-    def __init__(self, state_dim, action_dim, max_action):
-        super(Actor, self).__init__()
-        self.layer1 = nn.Linear(state_dim, 256)
-        self.layer2 = nn.Linear(256, 256)
-        self.layer3 = nn.Linear(256, action_dim)
-        self.max_action = max_action
-
-    def forward(self, state):
-        x = torch.relu(self.layer1(state))
-        x = torch.relu(self.layer2(x))
-        x = self.max_action * torch.tanh(self.layer3(x))
-        return x
-
-# Twin Q-networks (Critic)
-class Critic(nn.Module):
-    def __init__(self, state_dim, action_dim):
-        super(Critic, self).__init__()
-        self.layer1 = nn.Linear(state_dim + action_dim, 256)
-        self.layer2 = nn.Linear(256, 256)
-        self.layer3 = nn.Linear(256, 1)
-
-    def forward(self, state, action):
-        x = torch.cat([state, action], 1)
-        x = torch.relu(self.layer1(x))
-        x = torch.relu(self.layer2(x))
-        x = self.layer3(x)
-        return x
-
-# Replay Buffer
-class ReplayBuffer:
-    def __init__(self, buffer_size):
-        self.buffer_size = buffer_size
-        self.buffer = deque(maxlen=buffer_size)
-        self.iterations = 0  # For tracking the number of iterations
-
-    def add(self, state, action, next_state, reward, done):
-        transition = Transition(state, action, next_state, reward, done)
-        self.buffer.append(transition)
-        self.iterations += 1
-
-    def sample(self, batch_size):
-        batch = random.sample(self.buffer, batch_size)
-        states, actions, next_states, rewards, dones = zip(*batch)
-        return (
-            torch.tensor(states, dtype=torch.float32),
-            torch.tensor(actions, dtype=torch.float32),
-            torch.tensor(next_states, dtype=torch.float32),
-            torch.tensor(rewards, dtype=torch.float32).unsqueeze(1),
-            torch.tensor(dones, dtype=torch.float32).unsqueeze(1)
-        )
-
-    def __len__(self):
-        return len(self.buffer)
+import os
+from ActorCritic import Actor
+from ActorCritic import Critic
 
 # TD3 algorithm
 class TD3:
     def __init__(self, state_dim, action_dim, max_action):
+        pass
         self.actor = Actor(state_dim, action_dim, max_action)
         self.actor_target = Actor(state_dim, action_dim, max_action)
         self.actor_target.load_state_dict(self.actor.state_dict())
-        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=0.001)
+        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=0.00001)#0.001
 
         self.critic1 = Critic(state_dim, action_dim)
         self.critic1_target = Critic(state_dim, action_dim)
         self.critic1_target.load_state_dict(self.critic1.state_dict())
-        self.critic1_optimizer = optim.Adam(self.critic1.parameters(), lr=0.002)
+        self.critic1_optimizer = optim.Adam(self.critic1.parameters(), lr=0.00003)#0.002
 
         self.critic2 = Critic(state_dim, action_dim)
         self.critic2_target = Critic(state_dim, action_dim)
         self.critic2_target.load_state_dict(self.critic2.state_dict())
-        self.critic2_optimizer = optim.Adam(self.critic2.parameters(), lr=0.002)
+        self.critic2_optimizer = optim.Adam(self.critic2.parameters(), lr=0.00003)#0.002
 
         self.max_action = max_action
 
@@ -89,7 +35,8 @@ class TD3:
         state = torch.FloatTensor(state.reshape(1, -1))
         return self.actor(state).cpu().data.numpy().flatten()
 
-    def train(self, replay_buffer, batch_size=64, gamma=0.99, noise=0.2, policy_noise=0.2, noise_clip=0.5, policy_freq=2):
+    #def train(self, replay_buffer, batch_size=64, gamma=0.99, noise=0.2, policy_noise=0.2, noise_clip=0.5, policy_freq=2):
+    def train(self, replay_buffer, batch_size=64, gamma=0.99, noise=0.2, policy_noise=0.2, noise_clip=0.2, policy_freq=2):
         if len(replay_buffer) < batch_size:
             return
 
@@ -133,116 +80,45 @@ class TD3:
 
             for param, target_param in zip(self.critic2.parameters(), self.critic2_target.parameters()):
                 target_param.data.copy_(0.995 * target_param.data + 0.005 * param.data)
+        # Return critic losses for logging
+        return critic1_loss, critic2_loss
 
-# Define your environment or import from Gym
-class ContinuumRobotEnv:
-    def __init__(self, num_segments=3, segment_length=0.1, action_range=(-1, 1), max_steps=100, goal_position=(0.5, 0.5)):
-        self.num_segments = num_segments
-        self.segment_length = segment_length
-        self.action_range = action_range
-        self.max_action = action_range[1]
-        self.max_steps = max_steps
-        self.current_step = 0
-        self.goal_position = np.array(goal_position)
-        self.state_dim = num_segments * 2
-        self.action_dim = num_segments
+    def save(self, filename):
+        torch.save(self.actor.state_dict(), filename + "_actor")
+        torch.save(self.critic1.state_dict(), filename + "_critic1")
+        torch.save(self.critic2.state_dict(), filename + "_critic2")
 
-    def reset(self):
-        self.current_step = 0
-        initial_state = np.zeros(self.state_dim)
-        return initial_state
+    def load(self, filename):
+        self.actor.load_state_dict(torch.load(filename + "_actor"))
+        self.actor_target.load_state_dict(self.actor.state_dict())
+        self.critic1.load_state_dict(torch.load(filename + "_critic1"))
+        self.critic1_target.load_state_dict(self.critic1.state_dict())
+        self.critic2.load_state_dict(torch.load(filename + "_critic2"))
+        self.critic2_target.load_state_dict(self.critic2.state_dict())
+    
+    def select_action2(desired_position, state_dim=6, action_dim=3, max_action=1.5, model_name=""):
+        script_directory = os.path.dirname(os.path.abspath(__file__))  # Get absolute path of script directory
+        model_path = os.path.join(script_directory, f"{model_name}actor.pth")  # Construct full path to actor model file
+        actor = Actor(state_dim, action_dim, max_action)
+        actor.load_state_dict(torch.load(model_path))
+        actor.eval()
 
-    def step(self, actions):
-        self.current_step += 1
-        next_state = self._simulate_robot(actions)
-        reward = self._compute_reward(next_state)
-        done = self.current_step >= self.max_steps
-        return next_state, reward, done
+        with torch.no_grad():
+            state = torch.FloatTensor(desired_position.reshape(1, -1))
+            action = actor(state).cpu().data.numpy().flatten()
+        return action
+    
+    def load_agent(self, actor_path, critic1_path, critic2_path):
+        self.actor.load_state_dict(torch.load(actor_path))
+        self.actor_target.load_state_dict(self.actor.state_dict())
+        self.critic1.load_state_dict(torch.load(critic1_path))
+        self.critic1_target.load_state_dict(self.critic1.state_dict())
+        self.critic2.load_state_dict(torch.load(critic2_path))
+        self.critic2_target.load_state_dict(self.critic2.state_dict())
 
-    def _simulate_robot(self, actions):
-        state = np.zeros(self.state_dim)
-        current_position = np.array([0.0, 0.0])
-        current_angle = 0.0
-
-        for i in range(self.num_segments):
-            curvature = actions[i]
-            if curvature != 0:
-                radius = 1.0 / curvature
-                angle = curvature * self.segment_length
-                cx = current_position[0] - radius * np.sin(current_angle)
-                cy = current_position[1] + radius * np.cos(current_angle)
-                next_position = np.array([
-                    cx + radius * np.sin(current_angle + angle),
-                    cy - radius * np.cos(current_angle + angle)
-                ])
-                current_angle += angle
-            else:
-                next_position = current_position + self.segment_length * np.array([
-                    np.cos(current_angle),
-                    np.sin(current_angle)
-                ])
-            state[2 * i: 2 * i + 2] = next_position
-            current_position = next_position
-
-        return state
-
-    def _compute_reward(self, state):
-        end_effector_position = state[-2:]
-        distance_to_goal = np.linalg.norm(end_effector_position - self.goal_position)
-        reward = -distance_to_goal
-        return reward
-
-# Instantiate environment and TD3 agent
-env = ContinuumRobotEnv()
-td3_agent = TD3(env.state_dim, env.action_dim, env.max_action)
-
-# start a new wandb run to track this script
-wandb.init(
-    # set the wandb project where this run will be logged
-    project="TD3",
-
-    # track hyperparameters and run metadata
-    config={
-    #"learning_rate": 0.02,
-    #"architecture": "CNN",
-    #"dataset": "CIFAR-100",
-    #"epochs": 10,
-    }
-)
-
-# Training loop
-total_episodes = 1000
-rewards = []
-critic_losses1 = []
-critic_losses2 = []
-batch_size = 128
-replay_buffer = ReplayBuffer(buffer_size=1000000)
-episode_rewards = deque(maxlen=100)
-for episode in range(total_episodes):
-    state = env.reset()
-    episode_reward = 0
-    episode_critic_loss1 = []
-    episode_critic_loss2 = []
-    done = False
-    while not done:
-        
-        action = td3_agent.select_action(state)
-        next_state, reward, done = env.step(action)
-        replay_buffer.add(state, action, next_state, reward, done)
-        td3_agent.train(replay_buffer, batch_size=batch_size)
-        #critic_loss1, critic_loss2 = td3_agent.train(state, action, reward, next_state, done)
-        
-        state = next_state
-        episode_reward += reward
-        
-        #critic_loss1, critic_loss2 = td3_agent.train(state, action, reward, next_state, done)
-        #episode_critic_loss1.append(critic_loss1)
-        #episode_critic_loss2.append(critic_loss2)
-        
-
-    rewards.append(episode_reward)
-    episode_rewards.append(episode_reward)
-    avg_reward = np.mean(episode_rewards)
-    wandb.log({'avg_reward': avg_reward, 'episode': episode})
-    wandb.log({'rewards': rewards, 'episode': episode})
-    print(f"Episode: {episode + 1}, Average Reward: {avg_reward}")
+    def get_action(self, state):
+        if self.load_agent is None:
+            raise ValueError("No trained agent loaded.")
+        # Use the loaded agent to get the action
+        action = self.select_action(state)
+        return action

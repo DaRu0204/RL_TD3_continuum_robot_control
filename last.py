@@ -73,17 +73,17 @@ class TD3:
         self.actor = Actor(state_dim, action_dim, max_action)
         self.actor_target = Actor(state_dim, action_dim, max_action)
         self.actor_target.load_state_dict(self.actor.state_dict())
-        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=0.00005)#0.001
+        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=0.00001)#0.001
 
         self.critic1 = Critic(state_dim, action_dim)
         self.critic1_target = Critic(state_dim, action_dim)
         self.critic1_target.load_state_dict(self.critic1.state_dict())
-        self.critic1_optimizer = optim.Adam(self.critic1.parameters(), lr=0.00015)#0.002
+        self.critic1_optimizer = optim.Adam(self.critic1.parameters(), lr=0.00003)#0.002
 
         self.critic2 = Critic(state_dim, action_dim)
         self.critic2_target = Critic(state_dim, action_dim)
         self.critic2_target.load_state_dict(self.critic2.state_dict())
-        self.critic2_optimizer = optim.Adam(self.critic2.parameters(), lr=0.000015)#0.002
+        self.critic2_optimizer = optim.Adam(self.critic2.parameters(), lr=0.00003)#0.002
 
         self.max_action = max_action
 
@@ -238,7 +238,7 @@ class TD3:
 
 # Define your environment or import from Gym
 class ContinuumRobotEnv:
-    def __init__(self, num_segments=3, segment_length=0.5, action_range=(-1.5, 1.5), max_steps=250, goal_position=(1, 0.7)):
+    def __init__(self, num_segments=3, segment_length=0.5, action_range=(-0.05, 0.05), max_steps=25, goal_position=(1, 0.7)):
         self.num_segments = num_segments
         self.segment_length = segment_length
         self.action_range = action_range
@@ -322,7 +322,7 @@ wandb.init(
 
 def main():
     # Training loop
-    total_episodes = 500
+    total_episodes = 1000
     rewards = []
     batch_size = 64
     critic_losses = []  # List to store critic losses
