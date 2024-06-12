@@ -1,0 +1,27 @@
+2024-06-12 15:21:55,240 INFO    MainThread:30220 [wandb_setup.py:_flush():76] Current SDK version is 0.15.4
+2024-06-12 15:21:55,240 INFO    MainThread:30220 [wandb_setup.py:_flush():76] Configure stats pid to 30220
+2024-06-12 15:21:55,240 INFO    MainThread:30220 [wandb_setup.py:_flush():76] Loading settings from /home/km/.config/wandb/settings
+2024-06-12 15:21:55,240 INFO    MainThread:30220 [wandb_setup.py:_flush():76] Loading settings from /home/km/GitHub/RL_TD3_continuum_robot_control/wandb/settings
+2024-06-12 15:21:55,240 INFO    MainThread:30220 [wandb_setup.py:_flush():76] Loading settings from environment variables: {}
+2024-06-12 15:21:55,240 INFO    MainThread:30220 [wandb_setup.py:_flush():76] Applying setup settings: {'_disable_service': False}
+2024-06-12 15:21:55,240 INFO    MainThread:30220 [wandb_setup.py:_flush():76] Inferring run settings from compute environment: {'program_relpath': 'full.py', 'program': '/home/km/GitHub/RL_TD3_continuum_robot_control/full.py'}
+2024-06-12 15:21:55,240 INFO    MainThread:30220 [wandb_init.py:_log_setup():507] Logging user logs to /home/km/GitHub/RL_TD3_continuum_robot_control/wandb/run-20240612_152155-825zbgxr/logs/debug.log
+2024-06-12 15:21:55,240 INFO    MainThread:30220 [wandb_init.py:_log_setup():508] Logging internal logs to /home/km/GitHub/RL_TD3_continuum_robot_control/wandb/run-20240612_152155-825zbgxr/logs/debug-internal.log
+2024-06-12 15:21:55,241 INFO    MainThread:30220 [wandb_init.py:init():547] calling init triggers
+2024-06-12 15:21:55,241 INFO    MainThread:30220 [wandb_init.py:init():554] wandb.init called with sweep_config: {}
+config: {}
+2024-06-12 15:21:55,242 INFO    MainThread:30220 [wandb_init.py:init():596] starting backend
+2024-06-12 15:21:55,242 INFO    MainThread:30220 [wandb_init.py:init():600] setting up manager
+2024-06-12 15:21:55,243 INFO    MainThread:30220 [backend.py:_multiprocessing_setup():106] multiprocessing start_methods=fork,spawn,forkserver, using: spawn
+2024-06-12 15:21:55,244 INFO    MainThread:30220 [wandb_init.py:init():606] backend started and connected
+2024-06-12 15:21:55,245 INFO    MainThread:30220 [wandb_init.py:init():703] updated telemetry
+2024-06-12 15:21:55,251 INFO    MainThread:30220 [wandb_init.py:init():736] communicating run to backend with 60.0 second timeout
+2024-06-12 15:21:56,714 INFO    MainThread:30220 [wandb_run.py:_on_init():2176] communicating current version
+2024-06-12 15:21:56,826 INFO    MainThread:30220 [wandb_run.py:_on_init():2185] got version response 
+2024-06-12 15:21:56,827 INFO    MainThread:30220 [wandb_init.py:init():787] starting run threads in backend
+2024-06-12 15:21:56,879 INFO    MainThread:30220 [wandb_run.py:_console_start():2155] atexit reg
+2024-06-12 15:21:56,879 INFO    MainThread:30220 [wandb_run.py:_redirect():2010] redirect: SettingsConsole.WRAP_RAW
+2024-06-12 15:21:56,879 INFO    MainThread:30220 [wandb_run.py:_redirect():2075] Wrapping output streams.
+2024-06-12 15:21:56,880 INFO    MainThread:30220 [wandb_run.py:_redirect():2100] Redirects installed.
+2024-06-12 15:21:56,880 INFO    MainThread:30220 [wandb_init.py:init():828] run started, returning control to user process
+2024-06-12 15:22:20,112 WARNING MsgRouterThr:30220 [router.py:message_loop():77] message_loop has been closed

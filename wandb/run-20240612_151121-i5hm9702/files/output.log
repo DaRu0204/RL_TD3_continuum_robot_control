@@ -1,0 +1,25 @@
+/home/km/GitHub/RL_TD3_continuum_robot_control/full.py:59: UserWarning: Creating a tensor from a list of numpy.ndarrays is extremely slow. Please consider converting the list to a single numpy.ndarray with numpy.array() before converting to a tensor. (Triggered internally at ../torch/csrc/utils/tensor_new.cpp:245.)
+  torch.tensor(states, dtype=torch.float32),
+State after step: [0.08368449 0.04655006]
+Action: [ 1.0152683  -0.04927435 -0.04787677]
+State: [0.08368449 0.04655006]
+Error: 0.010877666216461862
+segment_positions: [[0.  0. ]
+ [0.1 0. ]]
+Traceback (most recent call last):
+  File "/home/km/GitHub/RL_TD3_continuum_robot_control/full.py", line 349, in <module>
+    main()
+  File "/home/km/GitHub/RL_TD3_continuum_robot_control/full.py", line 346, in main
+    env.render()
+  File "/home/km/GitHub/RL_TD3_continuum_robot_control/full.py", line 278, in render
+    print(f"Current state: {self.current_state}")
+AttributeError: 'ContinuumRobotEnv' object has no attribute 'current_state'
+Traceback (most recent call last):
+  File "/home/km/GitHub/RL_TD3_continuum_robot_control/full.py", line 349, in <module>
+    main()
+  File "/home/km/GitHub/RL_TD3_continuum_robot_control/full.py", line 346, in main
+    env.render()
+  File "/home/km/GitHub/RL_TD3_continuum_robot_control/full.py", line 278, in render
+    print(f"Current state: {self.current_state}")
+AttributeError: 'ContinuumRobotEnv' object has no attribute 'current_state'. Did you mean: 'current_step'?
+Rendering environment with action: None

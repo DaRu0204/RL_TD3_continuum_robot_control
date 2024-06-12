@@ -43,13 +43,15 @@ class ContinuumRobotEnv:
         actions = np.clip(actions, -self.max_tendon_tension, self.max_tendon_tension)
         # Scale the actions to the maximum allowed value
         actions = actions * self.max_action
-        next_state = self._simulate_robot(actions)
+        #next_state = self._simulate_robot(actions)
+        next_state = self.render_sim(actions)
         reward = self._compute_reward(next_state)
         done = self.current_step >= self.max_steps
         return next_state, reward, done
 
     def _simulate_robot(self, actions):
-        segment_positions = np.zeros(2)
+        #segment_positions = np.zeros(2)
+        start_pos = np.array([0.0, 0.0])
         state = np.zeros([self.state_dim])
         orientation = 0.0
 
@@ -58,7 +60,7 @@ class ContinuumRobotEnv:
             kappa = actions[i] / self.segment_length
             
             # Update the starting position of the segment to be the end position of the previous segment
-            start_pos = segment_positions[-1]
+            #start_pos = segment_positions[-1]
             
             if kappa != 0:
                 # Compute the new segment end position for non-zero curvature
@@ -210,6 +212,44 @@ class ContinuumRobotEnv:
         plt.legend()
         plt.axis('equal')
         plt.show()
+
+    def render_sim(self, actions):
+        # Initialize segment positions and orientation
+        segment_positions = [np.zeros(2)]
+        orientation = 0.0
+
+        for i in range(self.num_segments):
+            # Compute the curvature (kappa) using the PCC method for each segment
+            kappa = actions[i] / self.segment_length
+            
+            # Update the starting position of the segment to be the end position of the previous segment
+            start_pos = segment_positions[-1]
+            
+            if kappa != 0:
+                # Compute the new segment end position for non-zero curvature
+                delta_theta = kappa * self.segment_length
+                r = 1 / kappa
+                cx = start_pos[0] - r * np.sin(orientation)
+                cy = start_pos[1] + r * np.cos(orientation)
+                start_angle = orientation
+                end_angle = orientation + delta_theta
+                angles = np.linspace(start_angle, end_angle, 100)
+                x_arc = cx + r * np.sin(angles)
+                y_arc = cy - r * np.cos(angles)
+                segment_positions.extend(np.column_stack((x_arc, y_arc)))
+                # Update the orientation
+                orientation = end_angle
+            else:
+                # For zero curvature, the segment end position is a straight line
+                delta_x = self.segment_length * np.cos(orientation)
+                delta_y = self.segment_length * np.sin(orientation)
+                segment_positions.append(start_pos + np.array([delta_x, delta_y]))
+                # Update the orientation
+                orientation += 0
+            
+        segment_positions = np.array(segment_positions)
+        #print("segment_positions:",segment_positions)
+        return segment_positions[-2]
     
     def render3(self, state, actions):
         # Initialize segment positions and orientation

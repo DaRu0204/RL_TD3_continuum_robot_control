@@ -1,0 +1,16 @@
+Traceback (most recent call last):
+  File "/home/km/GitHub/RL_TD3_continuum_robot_control/full.py", line 348, in <module>
+    main()
+  File "/home/km/GitHub/RL_TD3_continuum_robot_control/full.py", line 312, in main
+    next_state, reward, done = env.step(action)
+  File "/home/km/GitHub/RL_TD3_continuum_robot_control/full.py", line 192, in step
+    next_state = self._simulate_robot(actions)
+AttributeError: 'ContinuumRobotEnv' object has no attribute '_simulate_robot'
+Traceback (most recent call last):
+  File "/home/km/GitHub/RL_TD3_continuum_robot_control/full.py", line 348, in <module>
+    main()
+  File "/home/km/GitHub/RL_TD3_continuum_robot_control/full.py", line 312, in main
+    next_state, reward, done = env.step(action)
+  File "/home/km/GitHub/RL_TD3_continuum_robot_control/full.py", line 192, in step
+    next_state = self._simulate_robot(actions)
+AttributeError: 'ContinuumRobotEnv' object has no attribute '_simulate_robot'. Did you mean: 'simulation_robot'?

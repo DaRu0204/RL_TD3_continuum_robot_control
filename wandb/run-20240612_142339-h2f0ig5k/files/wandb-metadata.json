@@ -1,0 +1,145 @@
+{
+    "os": "Linux-6.5.0-35-generic-x86_64-with-glibc2.35",
+    "python": "3.10.12",
+    "heartbeatAt": "2024-06-12T12:23:40.626921",
+    "startedAt": "2024-06-12T12:23:39.811412",
+    "docker": null,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "/home/km/GitHub/RL_TD3_continuum_robot_control/full.py",
+    "codePath": "full.py",
+    "git": {
+        "remote": "git@github.com:ivanvirgala/RL_TD3_continuum_robot_control.git",
+        "commit": "f8733a17908359957e02cddfe6b328cff782b80d"
+    },
+    "email": "ivan.virgala@tuke.sk",
+    "root": "/home/km/GitHub/RL_TD3_continuum_robot_control",
+    "host": "km-System-Product-Name",
+    "username": "km",
+    "executable": "/usr/bin/python",
+    "cpu_count": 12,
+    "cpu_count_logical": 20,
+    "cpu_freq": {
+        "current": 1.0459500000000002,
+        "min": 800.0,
+        "max": 4700.0
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 0.8,
+            "min": 800.0,
+            "max": 4900.0
+        },
+        {
+            "current": 0.8,
+            "min": 800.0,
+            "max": 4900.0
+        },
+        {
+            "current": 0.811,
+            "min": 800.0,
+            "max": 4900.0
+        },
+        {
+            "current": 1.63,
+            "min": 800.0,
+            "max": 4900.0
+        },
+        {
+            "current": 0.8,
+            "min": 800.0,
+            "max": 4900.0
+        },
+        {
+            "current": 0.8,
+            "min": 800.0,
+            "max": 4900.0
+        },
+        {
+            "current": 0.914,
+            "min": 800.0,
+            "max": 4900.0
+        },
+        {
+            "current": 0.8,
+            "min": 800.0,
+            "max": 4900.0
+        },
+        {
+            "current": 1.525,
+            "min": 800.0,
+            "max": 5000.0
+        },
+        {
+            "current": 0.8,
+            "min": 800.0,
+            "max": 5000.0
+        },
+        {
+            "current": 0.8,
+            "min": 800.0,
+            "max": 5000.0
+        },
+        {
+            "current": 0.8,
+            "min": 800.0,
+            "max": 5000.0
+        },
+        {
+            "current": 0.851,
+            "min": 800.0,
+            "max": 4900.0
+        },
+        {
+            "current": 1.251,
+            "min": 800.0,
+            "max": 4900.0
+        },
+        {
+            "current": 0.8,
+            "min": 800.0,
+            "max": 4900.0
+        },
+        {
+            "current": 0.801,
+            "min": 800.0,
+            "max": 4900.0
+        },
+        {
+            "current": 0.8,
+            "min": 800.0,
+            "max": 3800.0
+        },
+        {
+            "current": 1.059,
+            "min": 800.0,
+            "max": 3800.0
+        },
+        {
+            "current": 0.8,
+            "min": 800.0,
+            "max": 3800.0
+        },
+        {
+            "current": 0.8,
+            "min": 800.0,
+            "max": 3800.0
+        }
+    ],
+    "disk": {
+        "total": 501.9900436401367,
+        "used": 130.56850814819336
+    },
+    "gpu": "NVIDIA GeForce RTX 3060",
+    "gpu_count": 1,
+    "gpu_devices": [
+        {
+            "name": "NVIDIA GeForce RTX 3060",
+            "memory_total": 12884901888
+        }
+    ],
+    "memory": {
+        "total": 31.08065414428711
+    }
+}
