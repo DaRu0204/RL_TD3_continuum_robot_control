@@ -12,7 +12,7 @@ class ContinuumRobotEnv:
     #     self.goal_position = np.array(goal_position)
     #     self.state_dim = num_segments * 2
     #     self.action_dim = num_segments
-    def __init__(self, segment_length=0.1, max_tendon_tension=1, num_segments=3, num_tendons = 3, max_steps=25, max_action=2):
+    def __init__(self, segment_length=0.1, max_tendon_tension=1, num_segments=1, num_tendons = 3, max_steps=25, max_action=2):
         self.segment_length = segment_length  # Length of each segment
         self.max_tendon_tension = max_tendon_tension  # Maximum tension in tendons
         self.num_segments = num_segments  # Number of segments
@@ -27,7 +27,7 @@ class ContinuumRobotEnv:
         self.state = np.zeros(self.state_dim)
 
         # Target position (goal)
-        self.target_position = np.array([0.2, 0.1])
+        self.target_position = np.array([0.075, 0.04])
 
         # Current step counter
         self.current_step = 0
@@ -49,6 +49,41 @@ class ContinuumRobotEnv:
         return next_state, reward, done
 
     def _simulate_robot(self, actions):
+        segment_positions = np.zeros(2)
+        state = np.zeros([self.state_dim])
+        orientation = 0.0
+
+        for i in range(self.num_segments):
+            # Compute the curvature (kappa) using the PCC method for each segment
+            kappa = actions[i] / self.segment_length
+            
+            # Update the starting position of the segment to be the end position of the previous segment
+            start_pos = segment_positions[-1]
+            
+            if kappa != 0:
+                # Compute the new segment end position for non-zero curvature
+                delta_theta = kappa * self.segment_length
+                r = 1 / kappa
+                cx = start_pos[0] - r * np.sin(orientation)
+                cy = start_pos[1] + r * np.cos(orientation)
+                #start_angle = orientation
+                #end_angle = orientation + delta_theta
+                #angles = np.linspace(start_angle, end_angle, 100)
+                next_position = np.array([
+                    cx + r * np.sin(orientation + delta_theta),
+                    cy - r * np.cos(orientation + delta_theta)
+                ])
+                orientation += delta_theta
+            else:
+                next_position = start_pos + self.segment_length * np.array([
+                    np.cos(orientation),
+                    np.sin(orientation)
+                ])
+            state = next_position
+            start_pos = next_position
+        return state
+    
+    def _simulate_robot2(self, actions):
         # state = np.zeros(self.state_dim)
         # current_position = np.array([0.0, 0.0])
         # current_angle = 0.0
