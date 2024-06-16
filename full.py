@@ -72,17 +72,17 @@ class TD3:
         self.actor = Actor(state_dim, action_dim, max_action)
         self.actor_target = Actor(state_dim, action_dim, max_action)
         self.actor_target.load_state_dict(self.actor.state_dict())
-        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=0.00001)  # 0.001
+        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=0.000001)  # 0.001
 
         self.critic1 = Critic(state_dim, action_dim)
         self.critic1_target = Critic(state_dim, action_dim)
         self.critic1_target.load_state_dict(self.critic1.state_dict())
-        self.critic1_optimizer = optim.Adam(self.critic1.parameters(), lr=0.00003)  # 0.002
+        self.critic1_optimizer = optim.Adam(self.critic1.parameters(), lr=0.000003)  # 0.002
 
         self.critic2 = Critic(state_dim, action_dim)
         self.critic2_target = Critic(state_dim, action_dim)
         self.critic2_target.load_state_dict(self.critic2.state_dict())
-        self.critic2_optimizer = optim.Adam(self.critic2.parameters(), lr=0.00003)  # 0.002
+        self.critic2_optimizer = optim.Adam(self.critic2.parameters(), lr=0.000003)  # 0.002
 
         self.max_action = max_action
 
@@ -90,7 +90,7 @@ class TD3:
         state = torch.FloatTensor(state.reshape(1, -1))
         return self.actor(state).cpu().data.numpy().flatten()
 
-    def train(self, replay_buffer, batch_size=64, gamma=0.99, noise=0.2, policy_noise=0.2, noise_clip=0.2, policy_freq=2):
+    def train(self, replay_buffer, batch_size=64, gamma=0.95, noise=0.2, policy_noise=0.2, noise_clip=0.2, policy_freq=2):
         if len(replay_buffer) < batch_size:
             return
 
@@ -165,7 +165,7 @@ class TD3:
         return action
 
 class ContinuumRobotEnv:
-    def __init__(self, segment_length=0.1, max_tendon_tension=1, num_segments=1, num_tendons=3, max_steps=25, max_action=2):
+    def __init__(self, segment_length=0.1, max_tendon_tension=1, num_segments=1, num_tendons=3, max_steps=25, max_action=1):
         self.segment_length = segment_length
         self.max_tendon_tension = max_tendon_tension
         self.num_segments = num_segments
@@ -292,7 +292,7 @@ wandb.init(
 
 def main():
     # Training loop
-    total_episodes = 1000
+    total_episodes = 3000
     rewards = []
     batch_size = 64
     replay_buffer = ReplayBuffer(buffer_size=1000000)
@@ -317,7 +317,7 @@ def main():
         avg_reward = np.mean(episode_rewards)
         wandb.log({'avg_reward': avg_reward, 'episode': episode})
         wandb.log({'distance': dis, 'episode': episode})
-        #print(f"Episode: {episode + 1}, Average Reward: {avg_reward}")
+        print(f"Episode: {episode + 1}, Average Reward: {avg_reward}")
         
     td3_agent.save("td3_continuum_robot")
 
@@ -325,6 +325,9 @@ def main():
     loaded_agent.load("td3_continuum_robot")
     
     #desired_positon = np.array([0.0, 0.0, 0.0, 0.0, 1.0, 0.7])
+    #desired_positon = np.array([0.075, 0.04])
+    
+    
     desired_positon = np.array([0.075, 0.04])
     actionn = loaded_agent.select_action(desired_positon)
     
