@@ -12,21 +12,27 @@ from ActorCritic import Critic
 
 # TD3 algorithm
 class TD3:
+
+    lr_actor = 0.0001
+    lr_critic1 = 0.0003
+    lr_critic2 = 0.0003
+    gamma = 0.98
+
     def __init__(self, state_dim, action_dim, max_action):
         self.actor = Actor(state_dim, action_dim, max_action)
         self.actor_target = Actor(state_dim, action_dim, max_action)
         self.actor_target.load_state_dict(self.actor.state_dict())
-        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=0.000001)  # 0.001
+        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=TD3.lr_actor)         # 0.001
 
         self.critic1 = Critic(state_dim, action_dim)
         self.critic1_target = Critic(state_dim, action_dim)
         self.critic1_target.load_state_dict(self.critic1.state_dict())
-        self.critic1_optimizer = optim.Adam(self.critic1.parameters(), lr=0.000003)  # 0.002
+        self.critic1_optimizer = optim.Adam(self.critic1.parameters(), lr=TD3.lr_critic1)   # 0.002
 
         self.critic2 = Critic(state_dim, action_dim)
         self.critic2_target = Critic(state_dim, action_dim)
         self.critic2_target.load_state_dict(self.critic2.state_dict())
-        self.critic2_optimizer = optim.Adam(self.critic2.parameters(), lr=0.000003)  # 0.002
+        self.critic2_optimizer = optim.Adam(self.critic2.parameters(), lr=TD3.lr_critic2)   # 0.002
 
         self.max_action = max_action
 
@@ -34,7 +40,7 @@ class TD3:
         state = torch.FloatTensor(state.reshape(1, -1))
         return self.actor(state).cpu().data.numpy().flatten()
 
-    def train(self, replay_buffer, batch_size=64, gamma=0.95, noise=0.2, policy_noise=0.2, noise_clip=0.2, policy_freq=2):
+    def train(self, replay_buffer, batch_size=64, gamma=gamma, noise=0.1, policy_noise=0.1, noise_clip=0.2, policy_freq=3):
         if len(replay_buffer) < batch_size:
             return
 

@@ -17,25 +17,18 @@ Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'
 env = ContinuumRobotEnv()
 td3_agent = TD3(env.state_dim, env.action_dim, env.max_action)
 
-# start a new wandb run to track this script
-wandb.init(
-    project="TD3",
-    # track hyperparameters and run metadata
-    config={
-    #"learning_rate": 0.02,
-    #"architecture": "CNN",
-    #"dataset": "CIFAR-100",
-    #"epochs": 10,
-    }
-)
 
 def main():
     # Training loop
-    total_episodes = 30
+    total_episodes = 5000
     rewards = []
     batch_size = 64
     replay_buffer = ReplayBuffer(buffer_size=1000000)
     episode_rewards = deque(maxlen=100)
+
+    # start a new wandb run to track this script
+    wandb.init(project="TD3",config={"learning_rate": td3_agent.lr_actor, "epochs": total_episodes, "step": ContinuumRobotEnv.step, "gamma": td3_agent.gamma})
+
     for episode in range(total_episodes):
         state = env.reset()
         episode_reward = 0
@@ -62,13 +55,9 @@ def main():
     td3_agent.save("td3_continuum_robot")
 
     loaded_agent = TD3(state_dim=env.state_dim, action_dim=env.action_dim, max_action=env.max_action)
-    loaded_agent.load("td3_continuum_robot")
+    loaded_agent.load("td3_continuum_robot")   
     
-    #desired_positon = np.array([0.0, 0.0, 0.0, 0.0, 1.0, 0.7])
-    #desired_positon = np.array([0.075, 0.04])
-    
-    
-    desired_positon = np.array([0.075, 0.04])
+    desired_positon = np.array([0.08, 0.045])
     actionn = loaded_agent.select_action(desired_positon)
     
     # Ensure state is updated before rendering

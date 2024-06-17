@@ -1,10 +1,16 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import random
 
 class ContinuumRobotEnv:
-    def __init__(self, segment_length=0.1, max_tendon_tension=1, num_segments=1, num_tendons=3, max_steps=25, max_action=0.5):
+
+    step = 30
+    x_min, x_max = -0.05, 0.05
+    y_min, y_max = -0.05, 0.05
+    z_min, z_max = 0.025, 0.05
+
+    def __init__(self, segment_length=0.1, num_segments=1, num_tendons=3, max_steps=step, max_action=1):
         self.segment_length = segment_length
-        self.max_tendon_tension = max_tendon_tension
         self.num_segments = num_segments
         self.max_steps = max_steps
         self.max_action = max_action
@@ -13,18 +19,26 @@ class ContinuumRobotEnv:
         self.action_dim = num_segments * num_tendons
 
         self.state = np.zeros(self.state_dim)
-        self.target_position = np.array([0.075, 0.04])
+        self.target_position = np.array(ContinuumRobotEnv.random_target())
+        print("self.target_position:",self.target_position)
+        #self.target_position = np.array([0.08, 0.045])
         self.current_step = 0
+
+    def random_target():
+        x_target = random.uniform(ContinuumRobotEnv.x_min, ContinuumRobotEnv.x_max)
+        y_target = random.uniform(ContinuumRobotEnv.y_min, ContinuumRobotEnv.y_max)
+        target = np.array([x_target, y_target])
+        return target
 
     def reset(self):
         self.current_step = 0
         initial_state = np.zeros(self.state_dim)
         self.state = initial_state
         return initial_state
-    
+        
     def step(self, actions):
         self.current_step += 1
-        actions = np.clip(actions, -self.max_tendon_tension, self.max_tendon_tension)
+        actions = np.clip(actions, -self.max_action, self.max_action)
         next_state = self._simulate_robot(actions)
         reward = self._compute_reward(next_state)
         done = self.current_step >= self.max_steps
@@ -61,7 +75,8 @@ class ContinuumRobotEnv:
         return state
 
     def _compute_reward(self, state):
-        distance = np.linalg.norm(state - self.target_position)
+        #distance = np.linalg.norm(state - self.target_position)
+        distance = np.linalg.norm(np.array(state) - np.array(ContinuumRobotEnv.random_target()))
         reward = -distance
         return reward
 
@@ -70,7 +85,7 @@ class ContinuumRobotEnv:
         orientation = 0.0
 
         if actions is not None:
-            actions = np.clip(actions, -self.max_tendon_tension, self.max_tendon_tension)
+            actions = np.clip(actions, -self.max_action, self.max_action)
 
         for i in range(self.num_segments):
             kappa = actions[i] / self.segment_length if actions is not None else 0
@@ -94,7 +109,7 @@ class ContinuumRobotEnv:
                 segment_positions.append(start_pos + np.array([delta_x, delta_y]))
 
         segment_positions = np.array(segment_positions)
-        print("segment_positions:", segment_positions)
+        print("segment_positions:", segment_positions[-1])
         plt.figure(figsize=(8, 6))
         plt.plot(segment_positions[:, 0], segment_positions[:, 1], color='blue', label='Robot Curve')
         plt.scatter(0, 0, color='black', label='Base Position')
