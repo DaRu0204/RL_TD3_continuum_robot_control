@@ -4,12 +4,12 @@ import torch.optim as optim
 import numpy as np
 import random
 from collections import deque, namedtuple
-import wandb
-from wandb.keras import WandbCallback
 import os
-from ActorCritic import ReplayBuffer
+import matplotlib.pyplot as plt
+import wandb
 from ContinuumRobot import ContinuumRobotEnv
-from td3 import TD3
+from TD3 import TD3
+from ActorCritic import ReplayBuffer
 
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward', 'done'))
 
@@ -31,18 +31,17 @@ wandb.init(
 
 def main():
     # Training loop
-    total_episodes = 100
+    total_episodes = 30
     rewards = []
     batch_size = 64
-    critic_losses = []  # List to store critic losses
     replay_buffer = ReplayBuffer(buffer_size=1000000)
     episode_rewards = deque(maxlen=100)
     for episode in range(total_episodes):
         state = env.reset()
         episode_reward = 0
         done = False
+
         while not done:
-            
             action = td3_agent.select_action(state)
             next_state, reward, done = env.step(action)
             replay_buffer.add(state, action, next_state, reward, done)
@@ -59,19 +58,29 @@ def main():
         wandb.log({'distance': dis, 'episode': episode})
         print(f"Episode: {episode + 1}, Average Reward: {avg_reward}")
         
+    #td3_agent.save("/LearnedModel/td3_continuum_robot")
     td3_agent.save("td3_continuum_robot")
 
     loaded_agent = TD3(state_dim=env.state_dim, action_dim=env.action_dim, max_action=env.max_action)
     loaded_agent.load("td3_continuum_robot")
+    
     #desired_positon = np.array([0.0, 0.0, 0.0, 0.0, 1.0, 0.7])
+    #desired_positon = np.array([0.075, 0.04])
+    
+    
     desired_positon = np.array([0.075, 0.04])
-    action = loaded_agent.select_action(desired_positon)
-    state, reward, done = env.step(action)
-    error = np.linalg.norm(desired_positon - state)
-    print("Action:",action)
-    print("State:",state)
-    print("Error:",error)
-    env.render(state, action)
+    actionn = loaded_agent.select_action(desired_positon)
+    
+    # Ensure state is updated before rendering
+    statee, reward, done = env.step(actionn)
+    print("State after step:", statee)
+    error = np.linalg.norm(desired_positon - statee)
+    print("Action:", actionn)
+    print("State:", statee)
+    print("Error:", error)
+    
+    # Render the environment based on the updated state
+    env.render(actions=actionn)
 
 if __name__ == "__main__":
     main()

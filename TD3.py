@@ -13,21 +13,20 @@ from ActorCritic import Critic
 # TD3 algorithm
 class TD3:
     def __init__(self, state_dim, action_dim, max_action):
-        pass
         self.actor = Actor(state_dim, action_dim, max_action)
         self.actor_target = Actor(state_dim, action_dim, max_action)
         self.actor_target.load_state_dict(self.actor.state_dict())
-        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=0.00001)#0.001
+        self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=0.000001)  # 0.001
 
         self.critic1 = Critic(state_dim, action_dim)
         self.critic1_target = Critic(state_dim, action_dim)
         self.critic1_target.load_state_dict(self.critic1.state_dict())
-        self.critic1_optimizer = optim.Adam(self.critic1.parameters(), lr=0.00003)#0.002
+        self.critic1_optimizer = optim.Adam(self.critic1.parameters(), lr=0.000003)  # 0.002
 
         self.critic2 = Critic(state_dim, action_dim)
         self.critic2_target = Critic(state_dim, action_dim)
         self.critic2_target.load_state_dict(self.critic2.state_dict())
-        self.critic2_optimizer = optim.Adam(self.critic2.parameters(), lr=0.00003)#0.002
+        self.critic2_optimizer = optim.Adam(self.critic2.parameters(), lr=0.000003)  # 0.002
 
         self.max_action = max_action
 
@@ -35,8 +34,7 @@ class TD3:
         state = torch.FloatTensor(state.reshape(1, -1))
         return self.actor(state).cpu().data.numpy().flatten()
 
-    #def train(self, replay_buffer, batch_size=64, gamma=0.99, noise=0.2, policy_noise=0.2, noise_clip=0.5, policy_freq=2):
-    def train(self, replay_buffer, batch_size=64, gamma=0.99, noise=0.2, policy_noise=0.2, noise_clip=0.2, policy_freq=2):
+    def train(self, replay_buffer, batch_size=64, gamma=0.95, noise=0.2, policy_noise=0.2, noise_clip=0.2, policy_freq=2):
         if len(replay_buffer) < batch_size:
             return
 
@@ -80,34 +78,26 @@ class TD3:
 
             for param, target_param in zip(self.critic2.parameters(), self.critic2_target.parameters()):
                 target_param.data.copy_(0.995 * target_param.data + 0.005 * param.data)
-        # Return critic losses for logging
+
         return critic1_loss, critic2_loss
 
     def save(self, filename):
-        torch.save(self.actor.state_dict(), filename + "_actor")
-        torch.save(self.critic1.state_dict(), filename + "_critic1")
-        torch.save(self.critic2.state_dict(), filename + "_critic2")
+        directory = "RL_TD3_continuum_robot_control/LearnedModel"
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        torch.save(self.actor.state_dict(), os.path.join(directory, filename + "_actor"))
+        torch.save(self.critic1.state_dict(), os.path.join(directory,filename + "_critic1"))
+        torch.save(self.critic2.state_dict(), os.path.join(directory,filename + "_critic2"))
 
     def load(self, filename):
-        self.actor.load_state_dict(torch.load(filename + "_actor"))
+        directory = "RL_TD3_continuum_robot_control/LearnedModel"
+        self.actor.load_state_dict(torch.load(os.path.join(directory,filename + "_actor")))
         self.actor_target.load_state_dict(self.actor.state_dict())
-        self.critic1.load_state_dict(torch.load(filename + "_critic1"))
+        self.critic1.load_state_dict(torch.load(os.path.join(directory,filename + "_critic1")))
         self.critic1_target.load_state_dict(self.critic1.state_dict())
-        self.critic2.load_state_dict(torch.load(filename + "_critic2"))
+        self.critic2.load_state_dict(torch.load(os.path.join(directory,filename + "_critic2")))
         self.critic2_target.load_state_dict(self.critic2.state_dict())
-    
-    def select_action2(desired_position, state_dim=6, action_dim=3, max_action=1.5, model_name=""):
-        script_directory = os.path.dirname(os.path.abspath(__file__))  # Get absolute path of script directory
-        model_path = os.path.join(script_directory, f"{model_name}actor.pth")  # Construct full path to actor model file
-        actor = Actor(state_dim, action_dim, max_action)
-        actor.load_state_dict(torch.load(model_path))
-        actor.eval()
 
-        with torch.no_grad():
-            state = torch.FloatTensor(desired_position.reshape(1, -1))
-            action = actor(state).cpu().data.numpy().flatten()
-        return action
-    
     def load_agent(self, actor_path, critic1_path, critic2_path):
         self.actor.load_state_dict(torch.load(actor_path))
         self.actor_target.load_state_dict(self.actor.state_dict())
@@ -119,6 +109,5 @@ class TD3:
     def get_action(self, state):
         if self.load_agent is None:
             raise ValueError("No trained agent loaded.")
-        # Use the loaded agent to get the action
         action = self.select_action(state)
         return action
