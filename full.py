@@ -14,9 +14,9 @@ Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward'
 class Actor(nn.Module):
     def __init__(self, state_dim, action_dim, max_action):
         super(Actor, self).__init__()
-        self.layer1 = nn.Linear(state_dim, 256)
-        self.layer2 = nn.Linear(256, 256)
-        self.layer3 = nn.Linear(256, action_dim)
+        self.layer1 = nn.Linear(state_dim, 512)
+        self.layer2 = nn.Linear(512, 512)
+        self.layer3 = nn.Linear(512, action_dim)
         self.max_action = max_action
 
     def forward(self, state):
@@ -29,9 +29,9 @@ class Actor(nn.Module):
 class Critic(nn.Module):
     def __init__(self, state_dim, action_dim):
         super(Critic, self).__init__()
-        self.layer1 = nn.Linear(state_dim + action_dim, 256)
-        self.layer2 = nn.Linear(256, 256)
-        self.layer3 = nn.Linear(256, 1)
+        self.layer1 = nn.Linear(state_dim + action_dim, 512)
+        self.layer2 = nn.Linear(512, 512)
+        self.layer3 = nn.Linear(512, 1)
 
     def forward(self, state, action):
         x = torch.cat([state, action], 1)
@@ -69,7 +69,7 @@ class ReplayBuffer:
 # TD3 algorithm
 class TD3:
 
-    lr_actor = 0.00001
+    lr_actor = 0.000001
     lr_critic1 = 0.00003
     lr_critic2 = 0.00003
     gamma = 0.99
@@ -99,10 +99,10 @@ class TD3:
     def select_action(self, state, noise=0.1):
         state = torch.FloatTensor(state.reshape(1, -1))
         action = self.actor(state).cpu().data.numpy().flatten()
-        action += noise * np.random.normal(0, 1, size=3) #self.action_dim
+        action += noise * np.random.normal(0, 1, size=9) #self.action_dim
         return np.clip(action, -self.max_action, self.max_action)
 
-    def train(self, replay_buffer, batch_size=64, gamma=gamma, noise=0.3, policy_noise=0.3, noise_clip=0.5, policy_freq=2):
+    def train(self, replay_buffer, batch_size=128, gamma=gamma, noise=0.2, policy_noise=0.2, noise_clip=0.1, policy_freq=1):
         if len(replay_buffer) < batch_size:
             return
 
@@ -187,7 +187,7 @@ class ContinuumRobotEnv:
     y_min, y_max = 0.035, 0.05
     #z_min, z_max = 0.025, 0.05
 
-    def __init__(self, segment_length=0.1, num_segments=1, num_tendons=3, max_steps=step, max_action=1):
+    def __init__(self, segment_length=0.1, num_segments=3, num_tendons=3, max_steps=step, max_action=1):
         self.segment_length = segment_length
         self.num_segments = num_segments
         self.max_steps = max_steps
@@ -201,8 +201,8 @@ class ContinuumRobotEnv:
         self.current_step = 0
 
     def random_target(self):
-        x_target = random.uniform(ContinuumRobotEnv.x_min, ContinuumRobotEnv.x_max)
-        y_target = random.uniform(ContinuumRobotEnv.y_min, ContinuumRobotEnv.y_max)
+        x_target = random.uniform(ContinuumRobotEnv.x_min*3, ContinuumRobotEnv.x_max*3)
+        y_target = random.uniform(ContinuumRobotEnv.y_min*3, ContinuumRobotEnv.y_max*3)
         self.target_position = np.array([x_target, y_target])
         return self.target_position
 
@@ -217,7 +217,7 @@ class ContinuumRobotEnv:
         self.current_step += 1
         actions = np.clip(actions, -self.max_action, self.max_action)
         next_state = self._simulate_robot(actions)
-        reward = self._compute_reward(next_state)
+        reward = self._compute_reward(next_state, actions)
         done = self.current_step >= self.max_steps
         self.state = next_state  # Update the environment's state
         return next_state, reward, done
@@ -251,12 +251,21 @@ class ContinuumRobotEnv:
         state = start_pos
         return state
 
-    def _compute_reward(self, state):
+    def _compute_reward(self, state, action):
         distance = np.linalg.norm(state - self.target_position)
         reward = -distance
-        if distance < 0.00005:
-            reward += 20
-        reward -= self.current_step * 0.001  # Small penalty per step, adjust the factor as needed
+        if distance < 0.002:
+            reward += 25
+        reward -= self.current_step * 0.005  # Small penalty per step, adjust the factor as needed
+
+        # Smoothness penalty to discourage abrupt changes in action values
+        # This helps in achieving smoother trajectories
+        action_smoothness_penalty = np.sum(np.abs(action)) * 0.01  # Adjust the factor as needed
+        reward -= action_smoothness_penalty
+
+        # Encouragement for minimizing total distance traveled by the robot
+        total_distance_traveled = np.linalg.norm(self.state - state)
+        reward -= total_distance_traveled * 0.01  # Adjust the factor as needed
         return reward
 
     def render(self, actions=None):
@@ -308,9 +317,9 @@ class ContinuumRobotEnv:
 def main():
     # Training loop
     desired_position = np.array([0,0])
-    total_episodes = 5000
+    total_episodes = 2000
     rewards = []
-    batch_size = 64
+    batch_size = 128
     replay_buffer = ReplayBuffer(buffer_size=1000000)
     episode_rewards = deque(maxlen=100)
 
