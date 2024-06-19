@@ -69,10 +69,10 @@ class ReplayBuffer:
 # TD3 algorithm
 class TD3:
 
-    lr_actor = 0.000003
-    lr_critic1 = 0.000003
-    lr_critic2 = 0.000003
-    gamma = 0.98
+    lr_actor = 0.00001
+    lr_critic1 = 0.00003
+    lr_critic2 = 0.00003
+    gamma = 0.99
 
     def __init__(self, state_dim, action_dim, max_action):
         self.actor = Actor(state_dim, action_dim, max_action)
@@ -182,9 +182,9 @@ class TD3:
 
 class ContinuumRobotEnv:
 
-    step = 25
-    x_min, x_max = 0.06, 0.09
-    y_min, y_max = 0.025, 0.05
+    step = 32
+    x_min, x_max = 0.07, 0.09
+    y_min, y_max = 0.035, 0.05
     #z_min, z_max = 0.025, 0.05
 
     def __init__(self, segment_length=0.1, num_segments=1, num_tendons=3, max_steps=step, max_action=1):
@@ -254,6 +254,9 @@ class ContinuumRobotEnv:
     def _compute_reward(self, state):
         distance = np.linalg.norm(state - self.target_position)
         reward = -distance
+        if distance < 0.00005:
+            reward += 20
+        reward -= self.current_step * 0.001  # Small penalty per step, adjust the factor as needed
         return reward
 
     def render(self, actions=None):
@@ -305,7 +308,7 @@ class ContinuumRobotEnv:
 def main():
     # Training loop
     desired_position = np.array([0,0])
-    total_episodes = 500
+    total_episodes = 5000
     rewards = []
     batch_size = 64
     replay_buffer = ReplayBuffer(buffer_size=1000000)
@@ -322,6 +325,7 @@ def main():
         
         state = env.reset()
         episode_reward = 0
+        dis = 0
         done = False
 
         while not done:
@@ -339,7 +343,7 @@ def main():
         episode_rewards.append(episode_reward)
         avg_reward = np.mean(episode_rewards)
         wandb.log({'avg_reward': avg_reward, 'episode': episode})
-        wandb.log({'distance': dis, 'episode': episode})
+        wandb.log({'dis': dis, 'episode': episode})
         print(f"Episode: {episode + 1}, Average Reward: {avg_reward}")
         
     #td3_agent.save("/LearnedModel/td3_continuum_robot")
