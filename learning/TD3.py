@@ -88,7 +88,7 @@ class TD3:
         return critic1_loss, critic2_loss
 
     def save(self, filename):
-        directory = "RL_TD3_continuum_robot_control/LearnedModel"
+        directory = "RL_TD3_continuum_robot_control/learnedmodel"
         if not os.path.exists(directory):
             os.makedirs(directory)
         torch.save(self.actor.state_dict(), os.path.join(directory, filename + "_actor"))
@@ -96,7 +96,7 @@ class TD3:
         torch.save(self.critic2.state_dict(), os.path.join(directory,filename + "_critic2"))
 
     def load(self, filename):
-        directory = "RL_TD3_continuum_robot_control/LearnedModel"
+        directory = "RL_TD3_continuum_robot_control/learnedmodel"
         self.actor.load_state_dict(torch.load(os.path.join(directory,filename + "_actor")))
         self.actor_target.load_state_dict(self.actor.state_dict())
         self.critic1.load_state_dict(torch.load(os.path.join(directory,filename + "_critic1")))
