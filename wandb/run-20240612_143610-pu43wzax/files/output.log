@@ -1,9 +1,0 @@
-/home/km/GitHub/RL_TD3_continuum_robot_control/full.py:60: UserWarning: Creating a tensor from a list of numpy.ndarrays is extremely slow. Please consider converting the list to a single numpy.ndarray with numpy.array() before converting to a tensor. (Triggered internally at ../torch/csrc/utils/tensor_new.cpp:245.)
-  torch.tensor(states, dtype=torch.float32),
-tento state ide: [0.08427876 0.04423203]
-Action: [ 0.48824558  0.03040903 -0.20190641]
-State: [0.08427876 0.04423203]
-Error: 0.010198304484885104
-segment_positions: [0.09518078 0.02345954]
-
-State2: [0.08427876 0.04423203]

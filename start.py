@@ -10,19 +10,21 @@ import wandb
 from ContinuumRobot import ContinuumRobotEnv
 from TD3 import TD3
 from ActorCritic import ReplayBuffer
+from DynamcNoise import ExplorationNoise
 
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward', 'done'))
 
 # Instantiate environment and TD3 agent
 env = ContinuumRobotEnv()
 td3_agent = TD3(env.state_dim, env.action_dim, env.max_action)
+exploration_noise = ExplorationNoise(env.action_dim, env.max_action, initial_std=0.2, min_std=0.05, decay_rate=0.99)
 
 
 def main():
     # Training loop
     total_episodes = 5000
     rewards = []
-    batch_size = 64
+    batch_size = 128
     replay_buffer = ReplayBuffer(buffer_size=1000000)
     episode_rewards = deque(maxlen=100)
 
@@ -36,11 +38,14 @@ def main():
 
         while not done:
             action = td3_agent.select_action(state)
-            next_state, reward, done = env.step(action)
-            replay_buffer.add(state, action, next_state, reward, done)
+            noisy_action = exploration_noise.add_noise(action)
+            next_state, reward, done = env.step(noisy_action)
+            replay_buffer.add(state, noisy_action, next_state, reward, done)
             td3_agent.train(replay_buffer, batch_size=batch_size)
             state = next_state
             episode_reward += reward
+            
+        exploration_noise.decay_noise()
 
         # Store episode metrics
         dis = env.distance(state)
@@ -53,23 +58,30 @@ def main():
         
     #td3_agent.save("/LearnedModel/td3_continuum_robot")
     td3_agent.save("td3_continuum_robot")
-
+    """
     loaded_agent = TD3(state_dim=env.state_dim, action_dim=env.action_dim, max_action=env.max_action)
     loaded_agent.load("td3_continuum_robot")   
     
-    desired_positon = np.array([0.08, 0.045])
-    actionn = loaded_agent.select_action(desired_positon)
-    
+    # desired_positon = np.array([0.097, -0.022])
+    desired_positon = np.array(env.random_target())/1000
+    starting_position = np.zeros(3)
+    distanse = np.array(np.linalg.norm(starting_position - desired_positon))
+    predictors = np.concatenate([starting_position, desired_positon, [distanse]])
+    # desired_positon = np.array([-62.12314151,-113.03109834,249.71816844])/1000
+    actionn = loaded_agent.select_action(predictors)
+    statee = env._simulate_robot_model(actionn)
+    error = np.array(np.linalg.norm(statee - desired_positon))
     # Ensure state is updated before rendering
-    statee, reward, done = env.step(actionn)
-    print("State after step:", statee)
-    error = np.linalg.norm(desired_positon - statee)
-    print("Action:", actionn)
-    print("State:", statee)
-    print("Error:", error)
+    # statee, reward, done = env.step(actionn)
+    # print("State after step:", statee)
+    # error = np.linalg.norm(desired_positon - statee)
+    print("Desired position:",desired_positon*1000)
+    print("Action:", actionn*100)
+    print("State:", statee*1000)
+    print("Error:", error*1000)
     
     # Render the environment based on the updated state
-    env.render(actions=actionn)
-
+    # env.render(actions=actionn)
+    """
 if __name__ == "__main__":
     main()
