@@ -9,11 +9,11 @@ import os
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
 # Find the base directory (RL_TD3_continuum_robot_control)
-base_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "RL_TD3_continuum_robot_control_5"))
+base_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "RL_TD3_continuum_robot_control"))
 model_dir = os.path.join(base_dir, "SimulateRobotLearnedModel")
-model_path = os.path.join(model_dir, "trained_model_lr3.pth")
-scaler_X_path = os.path.join(model_dir, "scaler_X_lr3.pkl")
-scaler_y_path = os.path.join(model_dir, "scaler_y_lr3.pkl")
+model_path = os.path.join(model_dir, "trained_model_sl_1.pth")
+scaler_X_path = os.path.join(model_dir, "scaler_X_sl_1.pkl")
+scaler_y_path = os.path.join(model_dir, "scaler_y_sl_1.pkl")
 
 # Check if the model directory exists, and if not, print an error and exit
 if not os.path.exists(model_dir):
@@ -110,6 +110,7 @@ def main():
             print(f"Average inaccuracy after {n} tests: {avg_inaccuracy:.4f}")
             print(f"Maximum inaccuracy (distance): {max_inaccuracy:.4f}")
             print(f"Minimum inaccuracy (distance): {min_inaccuracy:.4f}")
+            print(f"Result: {avg_inaccuracy:4f} ± {np.std(inaccuracies):.4f}")
 
         except ValueError:
             print("Number of values (n) must be an integer.")
