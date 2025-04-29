@@ -13,11 +13,11 @@ from SL_learning.SupervisedLearningModel import NeuralNetwork
 
 # Define the directory and file paths within the current directory
 current_dir = os.path.dirname(os.path.abspath(__file__))
-base_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "RL_TD3_continuum_robot_control_5"))
+base_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "RL_TD3_continuum_robot_control"))
 model_dir = os.path.join(base_dir, "SimulateRobotLearnedModel")
-model_path = os.path.join(model_dir, "trained_model_lr3.pth")
-scaler_X_path = os.path.join(model_dir, "scaler_X_lr3.pkl")
-scaler_y_path = os.path.join(model_dir, "scaler_y_lr3.pkl")
+model_path = os.path.join(model_dir, "trained_model_sl_1.pth")
+scaler_X_path = os.path.join(model_dir, "scaler_X_sl_1.pkl")
+scaler_y_path = os.path.join(model_dir, "scaler_y_sl_1.pkl")
 
 # Check if the model directory exists, and if not, print an error and exit
 if not os.path.exists(model_dir):
@@ -71,7 +71,7 @@ for l1, l2, l3 in combinations:
 dataset_df = pd.DataFrame(dataset)
 
 # Save to a file
-output_file = os.path.join(base_dir, "dataset", "workspace_point_dataset.txt")
+output_file = os.path.join(base_dir, "dataset", "workspace_point_dataset_2.txt")
 dataset_df.to_csv(output_file, index=False, header=False, sep=",")
 
 print(f"Dataset successfully saved to {output_file}")
