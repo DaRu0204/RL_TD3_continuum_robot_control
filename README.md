@@ -22,7 +22,7 @@ pip install -r requirements.txt
 ## Project structure
 This project is organised into several directories:
 *   dataset\/: Contains data for training simulation and control models.
-*   workspace\/: Contains scripts for displaying workspace and generating .txt files that contain workspace points.
+*   workspace\/: Contains scripts to display workspace and generate .txt files that contain workspace points.
 *   SL_learning\/: Contains scripts to train and test simulation model.
 *   SimulateRobotLearnedModel\/: Contains saved simulation model and scalers.
 *   TD3_learning\/: Contains scripts to train, test, and optimize the control model based on the TD3 algorithm.
@@ -31,3 +31,22 @@ This project is organised into several directories:
 *   DDPGLearnedModel\/: Contains saved DDPG control model.
 *   DQN_learning\/: Contains scripts to train and test the control model based on the DDPG algorithm.
 *   DQNLearnedModel\/: Contains saved DQN control model.
+## Usage
+### 1. Train simulation model
+To train the simulation model, activate the script:
+```bash
+python SupervisedLearningModel.py
+```
+This script loads and prepares data for training, then executes the training loop and saves the trained model to the SimulateRobotLearnedModel\/ directory.
+
+The trained model can be tested by executing the script:
+```bash
+python ModelTester.py
+```
+This script allows the user to predict the position of the end-effector based on manually inserted cable lengths or randomly chosen cable lengths from the dataset.
+### 2. Workspace generation
+To generate workspace of the robot, activate the script:
+```bash
+python WorkSpaceData.py
+```
+This script generates a text file containing workspace points for all allowable action combinations produced by the trained simulation model. The file is saved to the dataset/ directory. This file is used during the training of the control model to select random point to reach during the training episode.
