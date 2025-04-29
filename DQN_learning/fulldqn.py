@@ -27,8 +27,7 @@ class QNetwork(nn.Module):
         self.fc2 = nn.Linear(256, 256)
         self.fc3 = nn.Linear(256, 256)
         self.fc4 = nn.Linear(256, 256)
-        self.fc5 = nn.Linear(256, 256)
-        self.fc6 = nn.Linear(256, action_dim)  # Output Q-values for each action
+        self.fc5 = nn.Linear(256, action_dim)  # Output Q-values for each action
 
     def forward(self, state):
         # Pass through hidden layers with ReLU activation
@@ -36,8 +35,7 @@ class QNetwork(nn.Module):
         x = torch.relu(self.fc2(x))
         x = torch.relu(self.fc3(x))
         x = torch.relu(self.fc4(x))
-        x = torch.relu(self.fc5(x))
-        return self.fc6(x)  # Get the Q-values for each action
+        return self.fc5(x)  # Get the Q-values for each action
 
 # Replay Buffer
 class ReplayBuffer:
@@ -156,7 +154,7 @@ class ContinuumRobotEnv:
         
         # Get the absolute path of the script directory
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        base_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "RL_TD3_continuum_robot_control_5"))
+        base_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "RL_TD3_continuum_robot_control"))
         model_dir = os.path.join(base_dir, "SimulateRobotLearnedModel")
         model_path = os.path.join(model_dir, model_file)
         scaler_X_path = os.path.join(model_dir, scaler_X_file)
@@ -206,7 +204,7 @@ class ContinuumRobotEnv:
     def _simulate_robot_model(self, action):
         """ Uses the trained model to predict the next position based on the given action. """
         action_scaled = np.array(action)  # Scale action
-        print(f"Action: {action_scaled}")
+        # print(f"Action: {action_scaled}")
         input_data = self.scaler_X.transform([action_scaled])
         input_tensor = torch.tensor(input_data, dtype=torch.float32)
 
@@ -244,15 +242,15 @@ class ContinuumRobotEnv:
 # Discrete action space
 ACTIONS = [
     (a1, a2, a3)
-    for a1 in range(0, 101, 5)
-    for a2 in range(0, 101, 5)
-    for a3 in range(0, 101, 5)
+    for a1 in range(0, 101, 10)
+    for a2 in range(0, 101, 10)
+    for a3 in range(0, 101, 10)
 ]
 
 # Environment initialization and training loop
 def main():
     # Initialize the robot environment and the DQN agent
-    env = ContinuumRobotEnv('workspace_point_dataset.txt', 'trained_model_lr3.pth', 'scaler_X_lr3.pkl', 'scaler_y_lr3.pkl')
+    env = ContinuumRobotEnv('workspace_point_dataset_2.txt', 'trained_model_sl_1.pth', 'scaler_X_sl_1.pkl', 'scaler_y_sl_1.pkl')
     agent = DQN(env.state_dim, len(ACTIONS))
     replay_buffer = ReplayBuffer(1000000)   # Experience replay buffer
     rewards = []    # Store rewards for monitoring performance
@@ -262,6 +260,12 @@ def main():
     
     # Initialize Weights & Biases (wandb) for logging
     wandb.init(project="DQN", config={"episodes": 5000, "max_steps": env.max_steps})
+    
+    # check for log file
+    log_file = 'dqn_log.txt'
+    if not os.path.exists(log_file):
+        with open(log_file, 'w') as f:
+            pass    # Create log file without header
     
     # Training loop for a number of episodes
     for episode in range(5):
@@ -298,18 +302,22 @@ def main():
         wandb.log({'avg_episode_length': np.mean(episode_lengths), 'episode': episode})
         wandb.log({'success_rate': successful_episodes / (episode + 1), 'episode': episode})
         
+        # log measured metrics to text file
+        with open(log_file, 'a') as f:
+            f.write(f"{episode + 1},{dis:.6f},{avg_reward:.6f}\n")
+        
         print(f"Episode: {episode + 1}, Avg Reward: {avg_reward}, Distance: {dis}, Success Rate: {successful_episodes / (episode + 1)}")
     
     
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    base_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "RL_TD3_continuum_robot_control_5"))
+    base_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "RL_TD3_continuum_robot_control"))
     directory = os.path.join(base_dir, "DQNLearnedModel")
     if not os.path.exists(directory):
         os.makedirs(directory)    
     model_path = os.path.join(directory, "dqn_model.pth")
     # Save trained model
     torch.save(agent.q_network.state_dict(), model_path)
-    
+    """
     # Test trained model
     trained_model = QNetwork(7, len(ACTIONS))
     trained_model.load_state_dict(torch.load(model_path))
@@ -326,6 +334,6 @@ def main():
     best_action = ACTIONS[best_action_idx]
     actual_position = env._simulate_robot_model(best_action)
     print(f"Predicted position: {actual_position*1000}")
-
+    """
 if __name__ == "__main__":
     main()
