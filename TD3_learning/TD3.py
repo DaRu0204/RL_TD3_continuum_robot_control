@@ -18,6 +18,7 @@ class TD3:
     lr_critic1 = 0.0003     # Learning rate for the first Critic model (0.0003)
     lr_critic2 = 0.0003     # Learning rate for the second Critic model (0.0003)
     gamma = 0.98            # Discount factor (gamma)
+    tau = 0.005             # Soft update parameter(tau)
 
     def __init__(self, state_dim, action_dim, max_action):
         # Initialize the Actor network and its target network
@@ -101,22 +102,22 @@ class TD3:
             actor_loss.backward()
             self.actor_optimizer.step()
 
-            # Soft update for the target networks (with a factor of 0.005)
+            # Soft update for the target networks (with tau)
             for param, target_param in zip(self.actor.parameters(), self.actor_target.parameters()):
-                target_param.data.copy_(0.995 * target_param.data + 0.005 * param.data)
+                target_param.data.copy_((1 - self.tau) * target_param.data + self.tau * param.data)
 
             for param, target_param in zip(self.critic1.parameters(), self.critic1_target.parameters()):
-                target_param.data.copy_(0.995 * target_param.data + 0.005 * param.data)
+                target_param.data.copy_((1 - self.tau) * target_param.data + self.tau * param.data)
 
             for param, target_param in zip(self.critic2.parameters(), self.critic2_target.parameters()):
-                target_param.data.copy_(0.995 * target_param.data + 0.005 * param.data)
+                target_param.data.copy_((1 - self.tau) * target_param.data + self.tau * param.data)
 
         return critic1_loss, critic2_loss
 
     def save(self, filename):
         #directory = "RL_TD3_continuum_robot_control_5/LearnedModel"
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        base_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "RL_TD3_continuum_robot_control_5"))
+        base_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "RL_TD3_continuum_robot_control"))
         directory = os.path.join(base_dir, "TD3LearnedModel")
         if not os.path.exists(directory):
             os.makedirs(directory)
@@ -128,7 +129,7 @@ class TD3:
     def load(self, filename):
         #directory = "RL_TD3_continuum_robot_control_5/LearnedModel"
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        base_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "RL_TD3_continuum_robot_control_5"))
+        base_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "RL_TD3_continuum_robot_control"))
         directory = os.path.join(base_dir, "TD3LearnedModel")
         # Load the main Actor and Critic models and target Actor and Critic models
         self.actor.load_state_dict(torch.load(os.path.join(directory,filename + "_actor")))

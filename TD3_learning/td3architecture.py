@@ -19,70 +19,33 @@ from SL_learning.SupervisedLearningModel import NeuralNetwork
 
 Transition = namedtuple('Transition', ('state', 'action', 'next_state', 'reward', 'done'))
 
-# Actor network
 class Actor(nn.Module):
-    def __init__(self, state_dim, action_dim, max_action):
-        """
-        Actor network for policy learning.
-        - state_dim: The size of the state space (input).
-        - action_dim: The size of the action space (output).
-        - max_action: The maximum action value (used to scale output).
-        """
+    def __init__(self, state_dim, action_dim, max_action, hidden_layers=2, hidden_units=256):
         super(Actor, self).__init__()
-        # Define the layers of the Actor network
-        self.layer1 = nn.Linear(state_dim, 256)         # First hidden layer with 256 neurons
-        self.layer2 = nn.Linear(256, 256)               # Second hidden layer with 256 neurons
-        self.layer3 = nn.Linear(256, 256)
-        self.layer4 = nn.Linear(256, 256)
-        self.layer5 = nn.Linear(256, action_dim)        # Output layer, outputs action_dim neurons
-        self.max_action = max_action                    # The maximum action value, to scale the output
+        layers = [nn.Linear(state_dim, hidden_units), nn.ReLU()]
+        for _ in range(hidden_layers - 1):
+            layers += [nn.Linear(hidden_units, hidden_units), nn.ReLU()]
+        layers.append(nn.Linear(hidden_units, action_dim))
+        self.model = nn.Sequential(*layers)
+        self.max_action = max_action
 
     def forward(self, state):
-        """
-        Forward pass through the Actor network to output an action.
-        - state: The input state from the environment.
-        """
-        x = torch.relu(self.layer1(state))                  # Apply ReLU activation after the first layer
-        x = torch.relu(self.layer2(x))                      # Apply ReLU activation after the second layer
-        # x = self.max_action * torch.tanh(self.layer4(x))  # Apply tanh to bound action between -1 and 1, then scale by max_action
-        x = torch.relu(self.layer3(x))
-        x = torch.relu(self.layer4(x))
-        x = self.max_action * torch.sigmoid(self.layer5(x)) # Apply sigmoid to bound action between 0 and 1, then scale by max_action
-        # x = x = self.max_action * (torch.tanh(self.layer5(x)) + 1) / 2
-        return x                                            # Return the predicted action
+        return self.max_action * torch.sigmoid(self.model(state))
 
-# Twin Q-networks (Critic)
 class Critic(nn.Module):
-    def __init__(self, state_dim, action_dim):
-        """
-        Critic network for value estimation (Q-value).
-        - state_dim: The size of the state space (part of input).
-        - action_dim: The size of the action space (part of input).
-        """
+    def __init__(self, state_dim, action_dim, hidden_layers=2, hidden_units=256):
         super(Critic, self).__init__()
-        self.layer1 = nn.Linear(state_dim + action_dim, 256)    # First hidden layer takes state and action as input
-        self.layer2 = nn.Linear(256, 256)                       # Second hidden layer with 256 neurons
-        self.layer3 = nn.Linear(256, 256)
-        self.layer4 = nn.Linear(256, 256)
-        self.layer5 = nn.Linear(256, 1)                         # Output layer, outputs a single Q-value
+        input_dim = state_dim + action_dim
+        layers = [nn.Linear(input_dim, hidden_units), nn.ReLU()]
+        for _ in range(hidden_layers - 1):
+            layers += [nn.Linear(hidden_units, hidden_units), nn.ReLU()]
+        layers.append(nn.Linear(hidden_units, 1))
+        self.model = nn.Sequential(*layers)
 
     def forward(self, state, action):
-        """
-        Forward pass through the Critic network to output a Q-value.
-        - state: The input state.
-        - action: The input action (concatenated with the state).
-        """
-        # Concatenate the state and action as input to the Critic
-        x = torch.cat([state, action], 1)       # Concatenate along dimension 1 (features)
-        # Forward pass through the network
-        x = torch.relu(self.layer1(x))          # Apply ReLU activation after the first layer
-        x = torch.relu(self.layer2(x))          # Apply ReLU activation after the second layer
-        x = torch.relu(self.layer3(x))
-        x = torch.relu(self.layer4(x))
-        x = self.layer5(x)                      # Output a single Q-value (no activation on the output)
-        return x                                # Return the Q-value for the given state-action pair
-
-# Replay Buffer
+        x = torch.cat([state, action], dim=1)
+        return self.model(x)
+    
 class ReplayBuffer:
     def __init__(self, buffer_size):
         """
@@ -119,31 +82,30 @@ class ReplayBuffer:
     def __len__(self):
         return len(self.buffer)
     
-# TD3 algorithm
 class TD3:
 
     lr_actor = 0.0001       # Learning rate for the Actor model (0.0001)
     lr_critic1 = 0.0003     # Learning rate for the first Critic model (0.0003)
     lr_critic2 = 0.0003     # Learning rate for the second Critic model (0.0003)
     gamma = 0.98            # Discount factor (gamma)
-    tau = 0.005             # Soft update parameter(tau)
+    tau = 0.005             # Soft update parameter (tau)
 
-    def __init__(self, state_dim, action_dim, max_action):
+    def __init__(self, state_dim, action_dim, max_action, hidden_layers, hidden_units):
         # Initialize the Actor network and its target network
-        self.actor = Actor(state_dim, action_dim, max_action)                               # Main Actor network
-        self.actor_target = Actor(state_dim, action_dim, max_action)                        # Target Actor network
+        self.actor = Actor(state_dim, action_dim, max_action, hidden_layers, hidden_units)                               # Main Actor network
+        self.actor_target = Actor(state_dim, action_dim, max_action, hidden_layers, hidden_units)                        # Target Actor network
         self.actor_target.load_state_dict(self.actor.state_dict())                          # Hard copy initial weights to target
         self.actor_optimizer = optim.Adam(self.actor.parameters(), lr=TD3.lr_actor)         # 0.001
         
         # Initialize the first Critic network and its target
-        self.critic1 = Critic(state_dim, action_dim)                                        # First Critic network
-        self.critic1_target = Critic(state_dim, action_dim)                                 # Target Critic 1 network
+        self.critic1 = Critic(state_dim, action_dim, hidden_layers, hidden_units)                                        # First Critic network
+        self.critic1_target = Critic(state_dim, action_dim, hidden_layers, hidden_units)                                 # Target Critic 1 network
         self.critic1_target.load_state_dict(self.critic1.state_dict())                      # Hard copy initial weights to target
         self.critic1_optimizer = optim.Adam(self.critic1.parameters(), lr=TD3.lr_critic1)   # 0.002
 
         # Initialize the second Critic network and its target
-        self.critic2 = Critic(state_dim, action_dim)                                        # Second Critic network
-        self.critic2_target = Critic(state_dim, action_dim)                                 # Target Critic 2 network
+        self.critic2 = Critic(state_dim, action_dim, hidden_layers, hidden_units)                                        # Second Critic network
+        self.critic2_target = Critic(state_dim, action_dim, hidden_layers, hidden_units)                                 # Target Critic 2 network
         self.critic2_target.load_state_dict(self.critic2.state_dict())                      # Hard copy initial weights to target
         self.critic2_optimizer = optim.Adam(self.critic2.parameters(), lr=TD3.lr_critic2)   # 0.002
 
@@ -267,12 +229,12 @@ class TD3:
     
 class ContinuumRobotEnv:
 
-    step = 1000
+    # step = 10
     x_min, x_max = -70.63, -18.33       # -108.15, 19.19
     y_min, y_max = -144.35, -92.05      # -144.35, -92.05
     z_min, z_max = 247.45, 299.76       # 204.57, 342.64
 
-    def __init__(self, segment_length=0.1, num_segments=1, num_tendons=3, max_steps=step, max_action=1):      # never change max_action = 1
+    def __init__(self, segment_length=0.1, num_segments=1, num_tendons=3, max_steps=10, max_action=1, distance_treshold=0.0005):      # never change max_action = 1
         """
         Initialize the environment for a continuum robot with defined number of segments in 3D space.
         """
@@ -318,6 +280,7 @@ class ContinuumRobotEnv:
         self.state = None
         self.target_position = None
         self.current_step = 0
+        self.distance_treshold = distance_treshold
 
     def random_target(self):
         random_row = random.choice(self.dataset)  # Select a random row from the dataset
@@ -334,11 +297,11 @@ class ContinuumRobotEnv:
         # initial_state = np.zeros(self.state_dim)
         initial_state = np.zeros(3) # resets initial position
         self.target_position = np.array(self.random_target())/1000  # generates random target position
-        print("Target position for this episode:", self.target_position)
+        # print("Target position for this episode:", self.target_position)
         distance_to_target = np.array(self.distance(initial_state))
         # self.state = initial_state  # Reset the enviroment's state
         self.state = np.concatenate([initial_state, self.target_position, [distance_to_target]])
-        print("State for this episode:", self.state)
+        # print("State for this episode:", self.state)
         return self.state
         
     def step(self, actions):
@@ -353,7 +316,7 @@ class ContinuumRobotEnv:
         reward = self._compute_reward(next_position)
         distance_to_target = np.array(self.distance(next_position))
         # done = self.current_step >= self.max_steps
-        done = self.current_step >= self.max_steps or self.distance(next_position) < 0.0005
+        done = self.current_step >= self.max_steps or self.distance(next_position) < self.distance_treshold
         # self.state = next_state  # Update the environment's state
         self.state = np.concatenate([next_position, self.target_position, [distance_to_target]])  # Update enviroment's state
         # print(f"Step {self.current_step}: Actions: {actions}, Next State: {next_position}, Reward: {reward}")
@@ -365,7 +328,7 @@ class ContinuumRobotEnv:
         """
         # Normalize the input actions
         actions_scaled = np.array(actions)*100
-        print("Action: ", actions_scaled)
+        # print("Action: ", actions_scaled)
         input_data = self.scaler_X.transform([actions_scaled])
         # input_data = self.scaler_X.transform([actions])
         input_tensor = torch.tensor(input_data, dtype=torch.float32)
@@ -413,83 +376,72 @@ class ExplorationNoise:
         Adds noise during exploration
         """
         noise = np.random.normal(0, self.std, size=self.action_dim)  # Generate noise
-        noisy_action = np.clip(action + noise, 0, self.max_action)  # Add noise and clip the action
+        noisy_action = np.clip(action + noise, 0, self.max_action)
+        # noisy_action = np.clip(action + noise, 0, self.max_action)  # Add noise and clip the action
         return noisy_action
 
     def decay_noise(self):
         """
         Gradually reduces the noise level.
         """
-        self.std = max(self.min_std, self.std * self.decay_rate)        
+        self.std = max(self.min_std, self.std * self.decay_rate)
+        
+def train_td3(config=None):
+    with wandb.init(config=config):
+        config = wandb.config
+        
+        # Instantiate environment and TD3 agent with hyperparameters from wandb
+        env = ContinuumRobotEnv(max_steps=1000)
+        td3_agent = TD3(env.state_dim, env.action_dim, env.max_action, config.hidden_layers, config.hidden_units)
+        
+        exploration_noise = ExplorationNoise(env.action_dim, env.max_action, initial_std=0.2, min_std=0.01, decay_rate=0.99)
 
-def main():
-    # Training loop
-    total_episodes = 5000
-    rewards = []
-    batch_size = 128
-    replay_buffer = ReplayBuffer(buffer_size=1000000)
-    episode_rewards = deque(maxlen=100)
-    
-    # Instantiate environment and TD3 agent
-    env = ContinuumRobotEnv()
-    td3_agent = TD3(env.state_dim, env.action_dim, env.max_action)
-    exploration_noise = ExplorationNoise(env.action_dim, env.max_action, initial_std=0.2, min_std=0.05, decay_rate=0.99)
+        replay_buffer = ReplayBuffer(buffer_size=1000000)
+        episode_rewards = deque(maxlen=100)
+        total_episodes = 1500
+        batch_size = 128
 
-    # start a new wandb run to track this script
-    wandb.init(project="TD3",name="PC1",config={"learning_rate": td3_agent.lr_actor, "epochs": total_episodes, "step": ContinuumRobotEnv.step, "gamma": td3_agent.gamma})
-
-    # check for log file
-    log_file = 'td3_log.txt'
-    if not os.path.exists(log_file):
-        with open(log_file, 'w') as f:
-            pass    # Create log file without header
-
-    for episode in range(total_episodes):
-        state = env.reset()
-        episode_reward = 0
-        done = False
-
-        while not done:
-            action = td3_agent.select_action(state)
-            noisy_action = exploration_noise.add_noise(action)
-            next_state, reward, done = env.step(noisy_action)
-            replay_buffer.add(state, noisy_action, next_state, reward, done)
-            td3_agent.train(replay_buffer, batch_size=batch_size)
-            state = next_state
-            episode_reward += reward
+        log_file = 'td3_architecture_log.txt'
+        if not os.path.exists(log_file):
+            with open(log_file, 'w') as f:
+                f.write(f"Run: layers={config.hidden_layers}, units={config.hidden_units}\n")
+        else:
+            with open(log_file, 'a') as f:
+                f.write(f"Run: layers={config.hidden_layers}, units={config.hidden_units}\n")
+                
+        for episode in range(total_episodes):
+            state = env.reset()
+            episode_reward = 0
+            done = False
             
-        exploration_noise.decay_noise()
+            while not done:
+                action = td3_agent.select_action(state)
+                noisy_action = exploration_noise.add_noise(action)
+                next_state, reward, done = env.step(noisy_action)
+                replay_buffer.add(state, noisy_action, next_state, reward, done)
+                td3_agent.train(replay_buffer, batch_size=batch_size)
+                state = next_state
+                episode_reward += reward
+                
+            exploration_noise.decay_noise()
+            
+            dis = env.distance(state)
+            episode_rewards.append(episode_reward)
+            avg_reward = np.mean(episode_rewards)
+            wandb.log({'avg_reward': avg_reward, 'episode': episode})
+            wandb.log({'distance': dis, 'episode': episode})
+            # log measured metrics to text file
+            with open(log_file, 'a') as f:
+                f.write(f"{episode + 1},{dis:.6f},{avg_reward:.6f}\n")
 
-        # Store episode metrics
-        dis = env.distance(state)
-        rewards.append(episode_reward)
-        episode_rewards.append(episode_reward)
-        avg_reward = np.mean(episode_rewards)
-        wandb.log({'avg_reward': avg_reward, 'episode': episode})
-        wandb.log({'distance': dis, 'episode': episode})
-        
-        # log measured metrics to text file
-        with open(log_file, 'a') as f:
-            f.write(f"{episode + 1},{dis:.6f},{avg_reward:.6f}\n")
-        
-        print(f"Episode: {episode + 1}, Average Reward: {avg_reward}")
-        
-    #td3_agent.save("/LearnedModel/td3_continuum_robot")
-    td3_agent.save("td3_continuum_robot")
-    """
-    loaded_agent = TD3(state_dim=env.state_dim, action_dim=env.action_dim, max_action=env.max_action)
-    loaded_agent.load("td3_continuum_robot")   
-    
-    # desired_positon = np.array([0.097, -0.022])
-    # desired_positon = np.array(env.random_target())/1000
-    desired_positon = np.array([-26.33573,-140.7042,264.039])/1000
-    starting_position = np.zeros(3)
-    distanse = np.array(np.linalg.norm(starting_position - desired_positon))
-    predictors = np.concatenate([starting_position, desired_positon, [distanse]])
-    actionn = loaded_agent.select_action(predictors)
-    statee = env._simulate_robot_model(actionn)
-    print("Action:", actionn*100)
-    print("State:", statee*1000)
-    """
-if __name__ == "__main__":
-    main()
+sweep_config = {
+    'method': 'grid',
+    'metric': {'name': 'avg_reward', 'goal': 'maximize'},
+    'parameters': {
+        'hidden_layers': {'values': [1, 2, 3, 4, 5]},
+        'hidden_units': {'values': [64, 128, 256, 512]}
+    }
+}
+
+sweep_id = wandb.sweep(sweep_config, project='TD3_architecture_optim')
+wandb.agent(sweep_id, function=train_td3)

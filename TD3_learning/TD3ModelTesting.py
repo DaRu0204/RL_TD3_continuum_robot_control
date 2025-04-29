@@ -37,6 +37,7 @@ def test_single_point(env, agent, num_tests=1):
     print(f"  Minimum Error (mm): {np.min(errors):.2f}")
     print(f"  Maximum Error (mm): {np.max(errors):.2f}")
     print(f"  Average Error (mm): {np.mean(errors):.2f}")
+    print(f"  Result (mm): {np.mean(errors):.2f} ± {np.std(errors):.2f}")
 
     # Plot histogram of errors
     plot_single_point_test_errors(errors)
@@ -68,17 +69,17 @@ def test_rectangle_combined(env, agent, rectangle_points):
     print("\n--- Running Rectangle Tests ---")
     
     # Run traversal test and collect results
-    traversal_errors, traversal_predicted_positions, traversal_desired_positions = test_rectangle(env, agent, rectangle_points, verbose=False)
+    traversal_errors, traversal_predicted_positions, traversal_desired_positions = test_rectangle(env, agent, rectangle_points, verbose=True)
     
     # Run origin test and collect results
     origin_errors, origin_predicted_positions, origin_desired_positions = test_rectangle_with_origin(env, agent, rectangle_points, verbose=False)
     
     # Display results for traversal test
-    print("\n--- Rectangle Traversal Test Results (Pn-1 → Pn) ---")
+    print("\n--- Traversal Test Results (Pn-1 → Pn) ---")
     display_test_results(traversal_errors, traversal_predicted_positions, traversal_desired_positions)
     
     # Display results for origin test
-    print("\n--- Rectangle Origin Test Results (Origin → Pn) ---")
+    print("\n--- Origin Test Results (Origin → Pn) ---")
     display_test_results(origin_errors, origin_predicted_positions, origin_desired_positions)
 
 
@@ -161,10 +162,11 @@ def display_test_results(errors, predicted_positions, desired_positions):
     print(f"  Minimum Error (mm): {np.min(errors):.2f}")
     print(f"  Maximum Error (mm): {np.max(errors):.2f}")
     print(f"  Average Error (mm): {np.mean(errors):.2f}")
+    print(f"  Result (mm): {np.mean(errors):.2f} ± {np.std(errors):.2f}")
 
     # Plot results
     plot_rectangle_test_with_zero(predicted_positions, desired_positions)
-    plot_rectangle_test(predicted_positions, desired_positions)
+    # plot_rectangle_test(predicted_positions, desired_positions)
 
 
 def plot_rectangle_test(predicted_positions, desired_positions):
@@ -225,25 +227,6 @@ def plot_rectangle_test_with_zero(predicted_positions, desired_positions):
 
 
 def generate_rectangle_points(center, width, height, num_points_per_side=8):
-    """Generate points along the edges of a rectangle in 3D space."""
-    """
-    half_width = width / 2
-    half_height = height / 2
-
-    # Rectangle corners
-    P1 = center + np.array([-half_width, -half_height, 0])
-    P2 = center + np.array([half_width, -half_height, 0])
-    P3 = center + np.array([half_width, half_height, 0])
-    P4 = center + np.array([-half_width, half_height, 0])
-
-    points = []
-    for start, end in [(P1, P2), (P2, P3), (P3, P4), (P4, P1)]:
-        edge_points = np.linspace(start, end, num_points_per_side + 1, endpoint=False)
-        points.append(edge_points)
-
-    points = np.vstack(points)
-    points = np.vstack([points, [P1]])  # Add P1 at the end to close the loop
-    """
     """Generate points along the edges of a rectangle in the x-z plane in 3D space."""
     
     half_width = width / 2
@@ -283,6 +266,28 @@ def generate_circle_points(center, diameter, num_points):
 
     return np.array(points)
 
+def generate_star_points(center, outer_radius, inner_radius, num_points=8, tilt_angle=0):
+    """Generate points forming a star shape in the x-z plane and tilt it in 3D space."""
+    angles = np.linspace(0, 2 * np.pi, num_points * 2, endpoint=False)
+    radii = np.array([outer_radius if i % 2 == 0 else inner_radius for i in range(num_points * 2)])
+    x = center[0] + radii * np.cos(angles)
+    z = center[2] + radii * np.sin(angles)
+    y = np.full_like(x, center[1])  # Keep y constant
+    star_points = np.vstack([x, y, z]).T
+    
+    # Tilt transformation matrix (rotation around X-axis)
+    tilt_radians = np.radians(tilt_angle)
+    rotation_matrix = np.array([
+        [1, 0, 0],
+        [0, np.cos(tilt_radians), -np.sin(tilt_radians)],
+        [0, np.sin(tilt_radians), np.cos(tilt_radians)]
+    ])
+    
+    tilted_star_points = (rotation_matrix @ (star_points - center).T).T + center
+    
+    # Append the first point again to close the shape
+    tilted_star_points = np.vstack([tilted_star_points, tilted_star_points[0]])
+    return tilted_star_points
 
 def main():
     # Instantiate environment and TD3 agent
@@ -294,7 +299,8 @@ def main():
     print("1. Single Point Test")
     print("2. Rectangle Test")
     print("3. Circle Test")
-    choice = int(input("Enter your choice (1, 2, or 3): "))
+    print("4. Star Test")
+    choice = int(input("Enter your choice (1 - 4): "))
 
     if choice == 1:
         num_tests = int(input("Enter the number of single point tests to perform: "))
@@ -302,7 +308,7 @@ def main():
 
     elif choice == 2:
         # center = env.random_target() / 1000  # Center of rectangle in meters
-        center = np.array([-43.42, -135, 274.86])/1000
+        center = np.array([-43.42, -130, 274.86])/1000
         width = 60.0 / 1000  # Width in meters
         height = 35.0 / 1000  # Height in meters
 
@@ -311,15 +317,26 @@ def main():
     
     elif choice == 3:
         # Circle parameters
-        center = np.array([-43.42, -118.2, 274.86]) / 1000
-        diameter = 105.0 / 1000  # Diameter in meters
+        # center = np.array([-43.42, -118.2, 274.86]) / 1000
+        center = np.array([-43.42, -130, 274.86]) /1000
+        # diameter = 105.0 / 1000  # Diameter in meters
+        diameter = 70.0 / 1000
         num_points = 16  # Number of points along the circle
 
         circle_points = generate_circle_points(center, diameter, num_points)
         test_rectangle_combined(env, agent, circle_points)
+        
+    elif choice == 4:
+        center = np.array([-43.42, -135, 274.86]) / 1000
+        outer_radius = 25.0 / 1000  # Outer radius in meters
+        inner_radius = outer_radius / (8/3)  # Inner radius calculation
+        tilt_angle = -10
+        
+        star_points = generate_star_points(center, outer_radius, inner_radius, num_points=8, tilt_angle=tilt_angle)
+        test_rectangle_combined(env, agent, star_points)
 
     else:
-        print("Invalid choice! Exiting.")
+        print("Invalid choice!")
 
 
 if __name__ == "__main__":

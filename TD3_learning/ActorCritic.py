@@ -22,6 +22,7 @@ class Actor(nn.Module):
         self.layer2 = nn.Linear(256, 256)               # Second hidden layer with 256 neurons
         self.layer3 = nn.Linear(256, 256)
         self.layer4 = nn.Linear(256, 256)
+        # self.layer5 = nn.Linear(256, 256)
         self.layer5 = nn.Linear(256, action_dim)        # Output layer, outputs action_dim neurons
         self.max_action = max_action                    # The maximum action value, to scale the output
 
@@ -34,6 +35,7 @@ class Actor(nn.Module):
         x = torch.relu(self.layer2(x))                      # Apply ReLU activation after the second layer
         x = torch.relu(self.layer3(x))
         x = torch.relu(self.layer4(x))
+        # x = torch.relu(self.layer5(x))
         # x = self.max_action * torch.tanh(self.layer3(x))  # Apply tanh to bound action between -1 and 1, then scale by max_action
         x = self.max_action * torch.sigmoid(self.layer5(x)) # Apply sigmoid to bound action between 0 and 1, then scale by max_action
         return x                                            # Return the predicted action
@@ -51,6 +53,7 @@ class Critic(nn.Module):
         self.layer2 = nn.Linear(256, 256)                       # Second hidden layer with 256 neurons
         self.layer3 = nn.Linear(256, 256)
         self.layer4 = nn.Linear(256, 256)
+        # self.layer5 = nn.Linear(256, 256)
         self.layer5 = nn.Linear(256, 1)                         # Output layer, outputs a single Q-value
 
     def forward(self, state, action):
@@ -66,6 +69,7 @@ class Critic(nn.Module):
         x = torch.relu(self.layer2(x))
         x = torch.relu(self.layer3(x))          # Apply ReLU activation after the second layer
         x = torch.relu(self.layer4(x))
+        # x = torch.relu(self.layer5(x))
         x = self.layer5(x)                      # Output a single Q-value (no activation on the output)
         return x                                # Return the Q-value for the given state-action pair
 

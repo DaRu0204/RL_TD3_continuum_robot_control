@@ -14,7 +14,7 @@ from SL_learning.SupervisedLearningModel import NeuralNetwork
 
 class ContinuumRobotEnv:
 
-    step = 100
+    step = 1000
     x_min, x_max = -70.63, -18.33       # -108.15, 19.19
     y_min, y_max = -144.35, -92.05      # -144.35, -92.05
     z_min, z_max = 247.45, 299.76       # 204.57, 342.64
@@ -25,13 +25,13 @@ class ContinuumRobotEnv:
         """
         # Define paths for the model, scalers and dataset
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        base_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "RL_TD3_continuum_robot_control_5"))
+        base_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "RL_TD3_continuum_robot_control"))
         model_dir = os.path.join(base_dir, "SimulateRobotLearnedModel")
-        model_path = os.path.join(model_dir, "trained_model_lr3.pth")
-        scaler_X_path = os.path.join(model_dir, "scaler_X_lr3.pkl")
-        scaler_y_path = os.path.join(model_dir, "scaler_y_lr3.pkl")
-        dataset_path = os.path.join(base_dir, "dataset", "workspace_point_dataset.txt")
-        # dataset_path = os.path.join(base_dir, "dataset", "Dataset-Actions-Positions.txt") # For testing only
+        model_path = os.path.join(model_dir, "trained_model_sl_1.pth")
+        scaler_X_path = os.path.join(model_dir, "scaler_X_sl_1.pkl")
+        scaler_y_path = os.path.join(model_dir, "scaler_y_sl_1.pkl")
+        dataset_path = os.path.join(base_dir, "dataset", "workspace_point_dataset_2.txt")
+        # dataset_path = os.path.join(base_dir, "dataset", "Dataset-Actions-Positions.txt")
         
         # Check if the model and scaler files exist
         if not os.path.exists(model_dir):
