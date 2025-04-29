@@ -24,12 +24,11 @@ class Actor(nn.Module):
     def __init__(self, state_dim, action_dim, max_action):
         super(Actor, self).__init__()
         # Define four fully connected layers (neurons in each layer = 256)
-        self.layer1 = nn.Linear(state_dim, 256)
-        self.layer2 = nn.Linear(256, 256)
+        self.layer1 = nn.Linear(state_dim, 128)
+        self.layer2 = nn.Linear(128, 256)
         self.layer3 = nn.Linear(256, 256)
-        self.layer4 = nn.Linear(256, 256)
-        self.layer5 = nn.Linear(256, 256)
-        self.layer6 = nn.Linear(256, action_dim)    # Output layer
+        self.layer4 = nn.Linear(256, 128)
+        self.layer5 = nn.Linear(128, action_dim)    # Output layer
         
         # The maximum possible action value to scale outputs
         self.max_action = max_action
@@ -40,12 +39,11 @@ class Actor(nn.Module):
         x = torch.relu(self.layer2(x))
         x = torch.relu(self.layer3(x))
         x = torch.relu(self.layer4(x))
-        x = torch.relu(self.layer5(x))
         
         # Use tanh activation in the last layer to ensure the action values are in a reasonable range
         # Then scale them using max_action
         # x = self.max_action * torch.tanh(self.layer6(x))
-        x = self.max_action * torch.sigmoid(self.layer6(x))
+        x = self.max_action * torch.sigmoid(self.layer5(x))
         return x
 
 # Single Q-network (Critic)
@@ -53,12 +51,11 @@ class Critic(nn.Module):
     def __init__(self, state_dim, action_dim):
         super(Critic, self).__init__()
         # The first layer takes both state and action as input
-        self.layer1 = nn.Linear(state_dim + action_dim, 256)
-        self.layer2 = nn.Linear(256, 256)
+        self.layer1 = nn.Linear(state_dim + action_dim, 128)
+        self.layer2 = nn.Linear(128, 256)
         self.layer3 = nn.Linear(256, 256)
-        self.layer4 = nn.Linear(256, 256)
-        self.layer5 = nn.Linear(256, 256)
-        self.layer6 = nn.Linear(256, 1) # Output layer (single Q-value)
+        self.layer4 = nn.Linear(256, 128)
+        self.layer5 = nn.Linear(128, 1) # Output layer (single Q-value)
 
     def forward(self, state, action):
         # Combine the state and action into one input tensor
@@ -69,10 +66,9 @@ class Critic(nn.Module):
         x = torch.relu(self.layer2(x))
         x = torch.relu(self.layer3(x))
         x = torch.relu(self.layer4(x))
-        x = torch.relu(self.layer5(x))
         
         # Output the Q-value without an activation function (linear output)
-        x = self.layer6(x)
+        x = self.layer5(x)
         return x
 
 # Replay Buffer
@@ -185,7 +181,7 @@ class DDPG:
     def save(self, filename):
         # Get the script directory (where the file should be saved)
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        base_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "RL_TD3_continuum_robot_control_5"))
+        base_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "RL_TD3_continuum_robot_control"))
         directory = os.path.join(base_dir, "DDPGLearnedModel")
         if not os.path.exists(directory):
             os.makedirs(directory)
@@ -199,7 +195,8 @@ class DDPG:
     def load(self, filename):
         # Get the script directory (where the file should be loaded from)
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        base_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "RL_TD3_continuum_robot_control_5"))
+        base_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "RL_TD3_continuum_robot_control"))
+        # directory = os.path.join(base_dir, "DDPGLearnedModel")
         directory = os.path.join(base_dir, "DDPGLearnedModel")
         actor_path = os.path.join(directory, filename + "_actor.pth")
         critic_path = os.path.join(directory, filename + "_critic.pth")
@@ -223,7 +220,7 @@ class ContinuumRobotEnv:
         
         # Get the absolute path of the script directory
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        base_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "RL_TD3_continuum_robot_control_5"))
+        base_dir = os.path.abspath(os.path.join(current_dir, "..", "..", "RL_TD3_continuum_robot_control"))
         model_dir = os.path.join(base_dir, "SimulateRobotLearnedModel")
         model_path = os.path.join(model_dir, model_file)
         scaler_X_path = os.path.join(model_dir, scaler_X_file)
@@ -273,7 +270,7 @@ class ContinuumRobotEnv:
     def _simulate_robot_model(self, action):
         """ Uses the trained model to predict the next position based on the given action. """
         action_scaled = np.array(action)*100    # Scale action values
-        print(f"Action: {action_scaled}")
+        # print(f"Action: {action_scaled}")
         input_data = self.scaler_X.transform([action_scaled])
         input_tensor = torch.tensor(input_data, dtype=torch.float32)
         
@@ -301,24 +298,61 @@ class ContinuumRobotEnv:
         reward = -distance_to_target
         
         # Check if the episode is over
-        done = distance_to_target < 0.001 or self.current_step >= self.max_steps
+        done = distance_to_target < 0.0005 or self.current_step >= self.max_steps
         next_state = self.next_position
         
         # Update the state with the new position, target position, and distance
         self.state = np.concatenate((next_state, self.target_position, [distance]))
         return self.state, reward, done
+    
+class ExplorationNoise:
+    def __init__(self, action_dim, max_action, initial_std=0.2, min_std=0.05, decay_rate=0.99):
+        """
+        Initializes dynamic noise for exploration.
+        - action_dim: Dimension of the action space.
+        - max_action: Maximum value for actions.
+        - initial_std: Initial standard deviation of the noise.
+        - min_std: Minimum standard deviation of the noise (target after decay).
+        - decay_rate: Rate of noise reduction (a value close to 1 means slower decay).
+        """
+        self.action_dim = action_dim
+        self.max_action = max_action
+        self.std = initial_std
+        self.min_std = min_std
+        self.decay_rate = decay_rate
+
+    def add_noise(self, action):
+        """
+        Adds noise during exploration
+        """
+        noise = np.random.normal(0, self.std, size=self.action_dim)  # Generate noise
+        noisy_action = np.clip(action + noise, 0, self.max_action)  # Add noise and clip the action
+        return noisy_action
+
+    def decay_noise(self):
+        """
+        Gradually reduces the noise level.
+        """
+        self.std = max(self.min_std, self.std * self.decay_rate)
 
 # Main function to train the agent
 def main():
     # Initialize the robot environment and the DDPG agent
-    env = ContinuumRobotEnv('workspace_point_dataset.txt', 'trained_model_lr3.pth', 'scaler_X_lr3.pkl', 'scaler_y_lr3.pkl')
+    env = ContinuumRobotEnv('workspace_point_dataset_2.txt', 'trained_model_sl_1.pth', 'scaler_X_sl_1.pkl', 'scaler_y_sl_1.pkl')
     agent = DDPG(env.state_dim, env.action_dim, env.max_action)
     replay_buffer = ReplayBuffer(1000000)   # Experience replay buffer
     rewards = []    # Store rewards for monitoring performance
     total_rewards = deque(maxlen=100)   # Moving average of rewards
+    exploration_noise = ExplorationNoise(env.action_dim, env.max_action, initial_std=0.2, min_std=0.05, decay_rate=0.99)
     
     # Initialize Weights & Biases (wandb) for logging
     wandb.init(project="DDPG", config={"episodes": 5000, "max_steps": env.max_steps})
+    
+    # check for log file
+    log_file = 'ddpg_log.txt'
+    if not os.path.exists(log_file):
+        with open(log_file, 'w') as f:
+            pass    # Create log file without header
 
     # Training loop for a number of episodes
     for episode in range(5000): # desired value 5000
@@ -328,12 +362,14 @@ def main():
         
         while not done:
             action = agent.select_action(state) # Select action from policy
-            next_state, reward, done = env.step(action) # Execute action in the environment
+            noisy_action = exploration_noise.add_noise(action) # Add noise to the action generated by the policy
+            next_state, reward, done = env.step(noisy_action) # Execute action with added noise in the environment
             replay_buffer.add(state, action, next_state, reward, done)  # Store experience
             agent.train(replay_buffer)  # Train the agent using replay buffer
             state = next_state  # Update current state
             total_reward += reward  # Accumulate episode reward
         
+        exploration_noise.decay_noise()
         # Store total reward for monitoring    
         rewards.append(total_reward)
         total_rewards.append(total_reward)
@@ -344,11 +380,15 @@ def main():
         wandb.log({'avg_reward': avg_reward, 'episode': episode})
         wandb.log({'distance': dis, 'episode': episode})
         
+        # log measured metrics to text file
+        with open(log_file, 'a') as f:
+            f.write(f"{episode + 1},{dis:.6f},{avg_reward:.6f}\n")
+        
         print(f"Episode: {episode + 1}, Average Reward: {avg_reward}")
 
     # Save the trained agent model
     agent.save("ddpg")
-    
+    """
     # Load the trained model and make a prediction
     agent.load("ddpg")
     distacne = np.linalg.norm(np.array([0,0,0]) - (np.array([-26.33573,-140.7042,264.039]))/1000)
@@ -356,7 +396,7 @@ def main():
     predicted_action = agent.get_action(state_pred)
     actual_position = env._simulate_robot_model(predicted_action)
     print(f"Predicted position: {actual_position*1000}")
-
+    """
 # Run the main function when the script is executed
 if __name__ == "__main__":
     main()
