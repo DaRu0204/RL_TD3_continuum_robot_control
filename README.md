@@ -21,5 +21,13 @@ pip install -r requirements.txt
 ```
 ## Project structure
 This project is organised into several directories:
-*   dataset\: Contains data for training simulation and control models
-*   workspace\: Contains scripts for displaying workspace and generating .txt files that contain workspace points
+*   dataset\/: Contains data for training simulation and control models.
+*   workspace\/: Contains scripts for displaying workspace and generating .txt files that contain workspace points.
+*   SL_learning\/: Contains scripts to train and test simulation model.
+*   SimulateRobotLearnedModel\/: Contains saved simulation model and scalers.
+*   TD3_learning\/: Contains scripts to train, test, and optimize the control model based on the TD3 algorithm.
+*   TD3LearnedModel\/: Contains saved TD3 control model.
+*   DDPG_learning\/: Contains scripts to train and test the control model based on the DDPG algorithm.
+*   DDPGLearnedModel\/: Contains saved DDPG control model.
+*   DQN_learning\/: Contains scripts to train and test the control model based on the DDPG algorithm.
+*   DQNLearnedModel\/: Contains saved DQN control model.
