@@ -71,7 +71,7 @@ python td3optim.py
 ```
 Both scripts utilize W&B's sweep function to find optimal combinations of selected parameters.
 
-To other models:
+To train other models:
 -   DDPG:
 ```bash
 python fullddpg.py
