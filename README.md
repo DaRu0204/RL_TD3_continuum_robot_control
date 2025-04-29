@@ -29,11 +29,11 @@ This project is organised into several directories:
 *   TD3LearnedModel\/: Contains saved TD3 control model.
 *   DDPG_learning\/: Contains scripts to train and test the control model based on the DDPG algorithm.
 *   DDPGLearnedModel\/: Contains saved DDPG control model.
-*   DQN_learning\/: Contains scripts to train and test the control model based on the DDPG algorithm.
+*   DQN_learning\/: Contains scripts to train and test the control model based on the DQN algorithm.
 *   DQNLearnedModel\/: Contains saved DQN control model.
 ## Usage
 ### 1. Train simulation model
-To train the simulation model, activate the script:
+To train the simulation model, run the script:
 ```bash
 python SupervisedLearningModel.py
 ```
@@ -45,8 +45,54 @@ python ModelTester.py
 ```
 This script allows the user to predict the position of the end-effector based on manually inserted cable lengths or randomly chosen cable lengths from the dataset.
 ### 2. Workspace generation
-To generate workspace of the robot, activate the script:
+To generate workspace of the robot, run the script:
 ```bash
 python WorkSpaceData.py
 ```
 This script generates a text file containing workspace points for all allowable action combinations produced by the trained simulation model. The file is saved to the dataset/ directory. This file is used during the training of the control model to select random point to reach during the training episode.
+### 3. Train control model
+To train the TD3-based control model, run the script:
+```bash
+python start.py
+```
+or
+```bash
+python fulltd3.py
+```
+Both scripts activate the training process of the control agent; W&B is used for remote training progress observation.
+
+To find optimal network architecture, run the script:
+```bash
+python td3architecture.py
+```
+To find the optimal hyperparameter combination, run the script:
+```bash
+python td3optim.py
+```
+Both scripts utilize W&B's sweep function to find optimal combinations of selected parameters.
+
+To other models:
+-   DDPG:
+```bash
+python fullddpg.py
+```
+- DQN:
+```bash
+python fulldqn.py
+```
+### 4. Control model testing
+To test trained models, run the script:
+```bash
+python TD3ModelTesting.py
+```
+```bash
+python DDPGModelTesting.py
+```
+```bash
+python DQNModelTesting.py
+```
+These scripts allow the user to access positioning accuracy and path-tracking capabilities of the trained model.
+## Contributing
+If you'd like to contribute, fork the repository and create a pull request with your changes.
+## License
+This project is licensed under the MIT License.
